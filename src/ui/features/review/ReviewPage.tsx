@@ -15,6 +15,8 @@ import { DiffStat } from './DiffStat.tsx';
 import styles from './ReviewPage.module.css';
 import { TargetPicker } from './TargetPicker.tsx';
 import { decodeTarget, encodeTarget, showsWorkingTree } from './target.ts';
+import { TreeResizer } from './TreeResizer.tsx';
+import { formatUpdatedAgo, useAutoRefresh } from './useAutoRefresh.ts';
 
 type ReviewPageProps = { repoId: string; targetParam: string | null };
 
@@ -32,6 +34,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   const summary = useAsync(`diff:${repoId}:${optionsKey}`, () => apiSend('POST', `/api/repos/${repoId}/diff`, options, DiffSummarySchema));
 
   const repo = repos.data?.find((candidate) => candidate.id === repoId);
+  const reloadSummary = summary.reload;
   // A new session per loaded summary: switching target or repository starts from a clean slate.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the summary identifies repository and options.
   const session = useMemo(() => (summary.data ? new DiffSession(repoId, options, summary.data, settings.viewMode) : null), [summary.data]);
@@ -40,6 +43,18 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   const diffView = useRef<DiffViewHandle>(null);
   const [activeFile, setActiveFile] = useState(0);
   const fileCount = summary.data?.files.length ?? 0;
+
+  // The last load is the moment the "updated N s ago" label counts from.
+  const updatedAt = useAutoRefresh({ repoId, target, loaded: summary.data, onReload: summary.reload });
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // While dragging, the grid follows a local width; it is written to settings only on release.
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
+  const treeWidth = previewWidth ?? settings.treeWidth;
 
   const setTarget = (next: DiffTarget) => navigate(`/repo/${repoId}?t=${encodeURIComponent(encodeTarget(next))}`);
   const goToFile = useCallback(
@@ -51,7 +66,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
     [fileCount],
   );
 
-  // j / k step through files, as in most review tools.
+  // j / k step through files, as in most review tools; r reloads without reaching for the mouse.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const typing = event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable]');
@@ -62,11 +77,13 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         goToFile(activeFile + 1);
       } else if (event.key === 'k') {
         goToFile(activeFile - 1);
+      } else if (event.key === 'r' && !event.repeat) {
+        reloadSummary();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeFile, goToFile]);
+  }, [activeFile, goToFile, reloadSummary]);
 
   return (
     <div className={styles.page}>
@@ -124,10 +141,19 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           onChange={(viewMode) => update({ viewMode })}
         />
         <IconButton icon="collapse" label="Collapse all files" onClick={() => session?.setAllCollapsed(true)} />
-        <IconButton icon="refresh" label="Reload changes" onClick={summary.reload} />
+        <span className={styles.updated} aria-live="polite">
+          {updatedAt !== null && formatUpdatedAgo(now, updatedAt)}
+        </span>
+        <IconButton
+          icon="refresh"
+          label="Reload changes (r)"
+          aria-busy={summary.loading}
+          className={summary.loading ? styles.refreshing : undefined}
+          onClick={summary.reload}
+        />
       </div>
 
-      <div className={styles.body} style={{ gridTemplateColumns: `${settings.treeWidth}px 1fr` }}>
+      <div className={styles.body} style={{ gridTemplateColumns: `${treeWidth}px 5px 1fr` }}>
         {summary.error !== null && (
           <div className={styles.message} role="alert">
             <p>{summary.error}</p>
@@ -144,6 +170,14 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         {session && fileCount > 0 && (
           <>
             <FileTree files={session.files} activeFile={activeFile} onSelect={goToFile} />
+            <TreeResizer
+              width={treeWidth}
+              onChange={setPreviewWidth}
+              onCommit={(width) => {
+                setPreviewWidth(null);
+                update({ treeWidth: width });
+              }}
+            />
             <DiffView
               key={session.id}
               ref={diffView}
