@@ -8,6 +8,7 @@ import { registerForgeRoutes } from './api/forges.ts';
 import { registerPullRoutes } from './api/pulls.ts';
 import { registerRepoRoutes } from './api/repos.ts';
 import { registerReviewRoutes } from './api/review.ts';
+import { registerSendRoutes } from './api/send.ts';
 import { Router } from './http/router.ts';
 import type { Paths } from './paths.ts';
 import { readSettings, writeSettings } from './store/settings.ts';
@@ -29,5 +30,6 @@ export function createRouter(context: AppContext): Router {
   registerPullRoutes(router, context);
   registerDiffRoutes(router, context);
   registerReviewRoutes(router, context);
+  registerSendRoutes(router, context);
   return router;
 }
