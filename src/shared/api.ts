@@ -3,6 +3,7 @@
  * Every payload crossing the boundary has a Zod schema here; types are derived from it.
  */
 import { z } from 'zod';
+import { ImportErrorSchema, ReviewDocumentSchema, ReviewTargetSchema } from './review.ts';
 
 /** Header every mutating request must carry; see `src/server/http/security.ts`. */
 export const CSRF_HEADER = 'x-revu';
@@ -128,3 +129,86 @@ export const BlobRequestSchema = z.object({
 /** Whole file content at one side of the diff, for expanding context. */
 export const BlobSchema = z.object({ lines: z.array(z.string()) });
 export type Blob = z.infer<typeof BlobSchema>;
+
+// ── Review comments ─────────────────────────────────────────────────────────
+
+/** Limits from the contract; enforced here so a broken UI cannot store an unbounded review. */
+export const MAX_COMMENT_BODY_BYTES = 64 * 1024;
+export const MAX_REVIEW_COMMENTS = 5000;
+export const MAX_ASSET_BYTES = 10 * 1024 * 1024;
+
+const utf8Length = (value: string): number => new TextEncoder().encode(value).length;
+
+/**
+ * The review model with the per-comment limits applied. `src/shared/review.ts` stays the single
+ * definition of the model; this only adds the request-side caps.
+ */
+export const ReviewDocumentInputSchema = ReviewDocumentSchema.superRefine((document, context) => {
+  if (document.comments.length > MAX_REVIEW_COMMENTS) {
+    context.addIssue({ code: 'custom', message: `A review has at most ${MAX_REVIEW_COMMENTS} comments`, path: ['comments'] });
+  }
+  document.comments.forEach((comment, index) => {
+    if (utf8Length(comment.body) > MAX_COMMENT_BODY_BYTES) {
+      context.addIssue({ code: 'custom', message: `Comment body is larger than ${MAX_COMMENT_BODY_BYTES} bytes`, path: ['comments', index, 'body'] });
+    }
+  });
+});
+export type ReviewDocumentInput = z.infer<typeof ReviewDocumentInputSchema>;
+
+/** Repository ids are derived from a path; anything else could not name a stored review. */
+const RepoIdSchema = z.string().regex(/^[a-f0-9]{8,64}$/);
+
+export const ReviewLoadRequestSchema = z.object({ repoId: RepoIdSchema, target: ReviewTargetSchema });
+export type ReviewLoadRequest = z.infer<typeof ReviewLoadRequestSchema>;
+/** Both load and save answer with the stored document; the model schema is the contract. */
+export const ReviewLoadResponseSchema = ReviewDocumentSchema;
+export const ReviewSaveResponseSchema = ReviewDocumentSchema;
+export type ReviewLoadResponse = z.infer<typeof ReviewLoadResponseSchema>;
+export type ReviewSaveResponse = z.infer<typeof ReviewSaveResponseSchema>;
+
+export const ReviewSaveRequestSchema = z.object({ repoId: RepoIdSchema, document: ReviewDocumentInputSchema });
+export type ReviewSaveRequest = z.infer<typeof ReviewSaveRequestSchema>;
+
+export const ReviewExportRequestSchema = z.object({
+  repoId: RepoIdSchema,
+  diffTarget: DiffTargetSchema,
+  document: ReviewDocumentInputSchema,
+});
+export type ReviewExportRequest = z.infer<typeof ReviewExportRequestSchema>;
+export const ReviewExportResponseSchema = z.object({ markdown: z.string() });
+export type ReviewExportResponse = z.infer<typeof ReviewExportResponseSchema>;
+
+export const ReviewReportSchema = z.object({
+  added: z.number().int().nonnegative(),
+  edited: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  errors: z.array(ImportErrorSchema),
+});
+export type ReviewReport = z.infer<typeof ReviewReportSchema>;
+
+export const ReviewImportRequestSchema = z.object({
+  repoId: RepoIdSchema,
+  diffTarget: DiffTargetSchema,
+  document: ReviewDocumentInputSchema,
+  markdown: z.string(),
+});
+export type ReviewImportRequest = z.infer<typeof ReviewImportRequestSchema>;
+export const ReviewImportResponseSchema = z.object({ document: ReviewDocumentSchema, report: ReviewReportSchema });
+export type ReviewImportResponse = z.infer<typeof ReviewImportResponseSchema>;
+
+// ── Comment images ──────────────────────────────────────────────────────────
+
+export const AssetTypeSchema = z.enum(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+export type AssetType = z.infer<typeof AssetTypeSchema>;
+
+/** The only shape that may ever be used as a file name under `data/assets`. */
+export const ASSET_ID_PATTERN = /^[a-f0-9]{64}\.(?:png|jpg|gif|webp)$/;
+
+export const AssetUploadRequestSchema = z.object({
+  name: z.string().min(1).max(255),
+  type: AssetTypeSchema,
+  dataBase64: z.string().min(1),
+});
+export type AssetUploadRequest = z.infer<typeof AssetUploadRequestSchema>;
+export const AssetUploadResponseSchema = z.object({ id: z.string() });
+export type AssetUploadResponse = z.infer<typeof AssetUploadResponseSchema>;
