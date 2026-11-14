@@ -1,11 +1,13 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import type { DraftOperation, PullRequest } from '../../shared/forge.ts';
 import { resolvePaths } from '../paths.ts';
 import { HttpError } from '../http/router.ts';
 import { reloadForgeTokens } from './env.ts';
 import { HOSTS, forgeFor, forgeStatus } from './registry.ts';
+import { fakeFetch } from './testing.ts';
 
 const home = mkdtempSync(join(tmpdir(), 'revu-forge-registry-'));
 const paths = resolvePaths({ REVU_HOME: home });
@@ -53,6 +55,83 @@ describe('forgeFor', () => {
 
     expect(forge.kind).toBe('github');
     expect(forge.capabilities.requestChanges).toBe(true);
+  });
+
+  it('wires uploads and image reads into the GitLab strategy', async () => {
+    writeFileSync(paths.envFile, 'GITLAB_TOKEN=test-token-456\n');
+    reloadForgeTokens();
+
+    const project = 'group/sub/proj';
+    const encoded = 'group%2Fsub%2Fproj';
+    const api = 'https://gitlab.com/api/v4';
+    const mrUrl = `${api}/projects/${encoded}/merge_requests/3`;
+    const assetId = `${'a'.repeat(64)}.png`;
+    mkdirSync(paths.assets, { recursive: true });
+    writeFileSync(join(paths.assets, assetId), Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+    const fake = fakeFetch({
+      [`GET ${mrUrl}`]: {
+        json: {
+          iid: 3,
+          title: 'MR 3',
+          description: 'Body',
+          author: { username: 'alice' },
+          state: 'opened',
+          draft: false,
+          updated_at: '2026-01-01T00:00:00Z',
+          source_branch: 'feature',
+          target_branch: 'main',
+          sha: 'head123',
+          web_url: `https://gitlab.com/${project}/-/merge_requests/3`,
+          diff_refs: { base_sha: 'base123', head_sha: 'head123', start_sha: 'start123' },
+        },
+      },
+      [`POST ${api}/projects/${encoded}/uploads`]: {
+        status: 201,
+        json: { markdown: '![shot](https://gitlab.com/uploads/a/shot.png)' },
+      },
+      [`POST ${mrUrl}/draft_notes`]: { status: 201, json: { id: 11 } },
+      [`POST ${mrUrl}/draft_notes/bulk_publish`]: { json: {} },
+    });
+
+    const forge = await forgeFor(paths, { host: 'gitlab.com', project }, { fetchImpl: fake });
+    const pr: PullRequest = {
+      number: 3,
+      title: 'MR 3',
+      author: 'alice',
+      state: 'open',
+      draft: false,
+      updatedAt: '2026-01-01T00:00:00Z',
+      baseRef: 'main',
+      headRef: 'feature',
+      headSha: 'head123',
+      webUrl: `https://gitlab.com/${project}/-/merge_requests/3`,
+      commentCount: null,
+      body: 'Body',
+      baseSha: 'base123',
+      mergeBaseSha: 'base123',
+    };
+    const drafts: DraftOperation[] = [
+      {
+        op: 'comment',
+        draftId: 'c1',
+        path: 'src/a.ts',
+        side: 'new',
+        line: 1,
+        startLine: null,
+        body: `Shot: ![shot](asset:${assetId})`,
+      },
+    ];
+
+    const results = await forge.submit({ host: 'gitlab.com', project }, 3, pr, drafts, null, null);
+
+    expect(results).toEqual([{ draftId: 'c1', ok: true, remoteId: '11' }]);
+    const upload = fake.calls.find((call) => call.url.endsWith('/uploads'));
+    expect(upload?.method).toBe('POST');
+    expect(upload?.headers['private-token']).toBe('test-token-456');
+    const draft = fake.calls.find((call) => call.url === `${mrUrl}/draft_notes`);
+    expect(draft?.body).toContain('![shot](https://gitlab.com/uploads/a/shot.png)');
+    expect(draft?.body).not.toContain(`asset:${assetId}`);
   });
 });
 

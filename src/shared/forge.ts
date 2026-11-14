@@ -140,6 +140,18 @@ export const DraftOperationSchema = z.discriminatedUnion('op', [
     line: z.number().int().positive(),
     /** First line of the range, or null for a single line. */
     startLine: z.number().int().positive().nullable(),
+    /**
+     * Old-side line of the commented row. Both `oldLine` and `newLine` set = unchanged line;
+     * only one set = added (`newLine`) or removed (`oldLine`) line; absent = derive from
+     * `side` + `line`.
+     */
+    oldLine: z.number().int().positive().nullable().optional(),
+    /** New-side line of the commented row; see `oldLine`. */
+    newLine: z.number().int().positive().nullable().optional(),
+    /** Old-side line of the range start; absent = derive from `side` + `startLine`. */
+    startOldLine: z.number().int().positive().nullable().optional(),
+    /** New-side line of the range start; absent = derive from `side` + `startLine`. */
+    startNewLine: z.number().int().positive().nullable().optional(),
     /** Comment text in Markdown. */
     body: z.string(),
   }),

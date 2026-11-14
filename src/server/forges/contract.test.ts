@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { PullRequest } from '../../shared/forge.ts';
 import { describeForgeContract } from './contract.ts';
 import type { ForgeHost } from './forge.ts';
 import { createGitHubForge } from './github.ts';
@@ -58,17 +57,6 @@ describe('strategy skeletons', () => {
       'https://gitlab.com/group/sub/api/-/blob/abc123/src/hello%20world.ts',
     );
     expect(forge.cloneUrl(gitlabRepo)).toBe('https://gitlab.com/group/sub/api.git');
-  });
-
-  it('reports every GitLab network method as not implemented', async () => {
-    // The GitHub strategy is complete and covered by github.test.ts.
-    const forge = createGitLabForge(gitlabHost, http);
-    const pr = {} as PullRequest;
-    await expect(forge.currentUser()).rejects.toThrow('Not implemented yet');
-    await expect(forge.listPullRequests(repo, { state: 'open' })).rejects.toThrow('Not implemented yet');
-    await expect(forge.getPullRequest(repo, 1)).rejects.toThrow('Not implemented yet');
-    await expect(forge.listThreads(repo, 1)).rejects.toThrow('Not implemented yet');
-    await expect(forge.submit(repo, 1, pr, [], null, null)).rejects.toThrow('Not implemented yet');
   });
 });
 

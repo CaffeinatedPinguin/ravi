@@ -8,13 +8,29 @@
 import type { ForgeKind, ForgeStatus, RepoRef } from '../../shared/forge.ts';
 import { HttpError } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
+import { readAsset } from '../review/assets.ts';
 import { readForgeTokens } from './env.ts';
-import type { Forge, ForgeFactory, ForgeHost } from './forge.ts';
+import type { Forge, ForgeHost } from './forge.ts';
 import { createGitHubForge } from './github.ts';
 import { createGitLabForge } from './gitlab.ts';
+import type { FetchLike, ForgeHttp } from './http.ts';
 import { createForgeHttp } from './http.ts';
 
-export type { ForgeFactory, ForgeHost } from './forge.ts';
+export type { ForgeHost } from './forge.ts';
+
+/** Everything a strategy needs beyond its host; the registry binds it to the application paths. */
+export type ForgeFactoryContext = {
+  http: ForgeHttp;
+  /** Adds the host's auth headers to a fresh header set (uploads need this outside `ForgeHttp`). */
+  auth: (headers: Headers) => void;
+  /** Reads an image from `data/assets`; the strategy only ever sees the asset id. */
+  readAsset: (id: string) => Promise<{ data: Uint8Array; type: string }>;
+  /** Test seam for the raw multipart fetch; production uses the global fetch. */
+  fetchImpl?: FetchLike;
+};
+
+/** Builds a strategy for one host; the registry owns the mapping from kind to this function. */
+export type ForgeFactory = (host: ForgeHost, context: ForgeFactoryContext) => Forge;
 
 function githubAuth(token: string, headers: Headers): void {
   headers.set('authorization', `Bearer ${token}`);
@@ -47,15 +63,26 @@ export const HOSTS: ForgeHost[] = [
 ];
 
 export const FACTORIES: Record<ForgeKind, ForgeFactory> = {
-  github: createGitHubForge,
-  gitlab: createGitLabForge,
+  // GitHub's factory does not need uploads yet; the registry adapts it to the shared context.
+  github: (host, context) => createGitHubForge(host, context.http),
+  gitlab: (host, context) =>
+    createGitLabForge(host, context.http, {
+      auth: context.auth,
+      readAsset: context.readAsset,
+      ...(context.fetchImpl === undefined ? {} : { fetchImpl: context.fetchImpl }),
+    }),
+};
+
+export type ForgeForOptions = {
+  /** Test seam: replace the network for every call made by the returned strategy. */
+  fetchImpl?: FetchLike;
 };
 
 /**
  * The facade every caller uses. Unknown hosts and missing tokens are request errors: the UI shows
  * them next to the repository, and no strategy is built without credentials.
  */
-export async function forgeFor(paths: Paths, repo: RepoRef): Promise<Forge> {
+export async function forgeFor(paths: Paths, repo: RepoRef, options: ForgeForOptions = {}): Promise<Forge> {
   const host = HOSTS.find((candidate) => candidate.host === repo.host);
   if (host === undefined) {
     throw new HttpError(400, `Unknown forge host: ${repo.host}`);
@@ -66,11 +93,18 @@ export async function forgeFor(paths: Paths, repo: RepoRef): Promise<Forge> {
     throw new HttpError(401, `No token for ${host.host}: add ${host.tokenEnv} to ~/.revu/.env`);
   }
 
+  const auth = (headers: Headers): void => host.auth(token, headers);
   const http = createForgeHttp({
     apiUrl: host.apiUrl,
-    auth: (headers) => host.auth(token, headers),
+    auth,
+    ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
   });
-  return FACTORIES[host.kind](host, http);
+  return FACTORIES[host.kind](host, {
+    http,
+    auth,
+    readAsset: (id) => readAsset(paths, id),
+    ...(options.fetchImpl === undefined ? {} : { fetchImpl: options.fetchImpl }),
+  });
 }
 
 /** Reports which hosts have a token; the token value is never part of the answer. */

@@ -85,6 +85,11 @@ function pullRequestRef(ref: RepoRef, number: number): string {
   if (host === undefined) {
     throw new HttpError(400, `Unknown forge host: ${ref.host}`);
   }
-  const forge = FACTORIES[host.kind](host, createForgeHttp({ apiUrl: host.apiUrl, auth: () => undefined }));
+  const forge = FACTORIES[host.kind](host, {
+    http: createForgeHttp({ apiUrl: host.apiUrl, auth: () => undefined }),
+    auth: () => undefined,
+    // Formatting a ref never touches assets; fail loudly if a strategy ever tries.
+    readAsset: () => Promise.reject(new Error('Assets are not available here')),
+  });
   return forge.pullRequestRef(number);
 }
