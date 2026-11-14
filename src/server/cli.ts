@@ -7,11 +7,14 @@ import type { AddressInfo } from 'node:net';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { createRouter, VERSION } from './app.ts';
+import { pruneClones } from './git/clone.ts';
 import { createHttpServer } from './http/server.ts';
 import type { UiAssets } from './http/static.ts';
 import { findRunningInstance, forgetInstance, loadOrCreateToken, recordInstance } from './instance.ts';
 import { openBrowser } from './open-browser.ts';
 import { resolvePaths } from './paths.ts';
+import type { Paths } from './paths.ts';
+import { readSettings } from './store/settings.ts';
 
 /** Fixed by default so bookmarks and the session cookie keep working between runs. */
 const DEFAULT_PORT = 4783;
@@ -90,6 +93,21 @@ export async function run(argv: string[], options: RunOptions): Promise<void> {
   console.log(`Open: ${appUrl(uiHost, token, folder)}`);
   if (shouldOpen) {
     openBrowser(appUrl(uiHost, token, folder));
+  }
+
+  // Pruning can walk a large clones folder; the server is already listening, so it runs in the background.
+  void pruneUnusedClones(paths);
+}
+
+/** Removes clones older than the retention setting; only the count is logged, never a path or token. */
+async function pruneUnusedClones(paths: Paths): Promise<void> {
+  try {
+    const removed = await pruneClones(paths, (await readSettings(paths)).cloneRetentionDays);
+    if (removed > 0) {
+      console.log(`revu pruned ${removed} unused clone(s)`);
+    }
+  } catch (error) {
+    console.error('revu could not prune clones:', error instanceof Error ? error.message : String(error));
   }
 }
 

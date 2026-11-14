@@ -3,6 +3,7 @@
  * Every payload crossing the boundary has a Zod schema here; types are derived from it.
  */
 import { z } from 'zod';
+import { RepoRefSchema } from './forge.ts';
 import { ImportErrorSchema, ReviewDocumentSchema, ReviewTargetSchema } from './review.ts';
 
 /** Header every mutating request must carry; see `src/server/http/security.ts`. */
@@ -35,15 +36,21 @@ export type Settings = z.infer<typeof SettingsSchema>;
 
 export const RepoSchema = z.object({
   id: z.string(),
-  /** Absolute path of the working tree. */
+  /** Absolute path of the working tree, or of the bare clone for a remote repository. */
   path: z.string(),
   name: z.string(),
   lastUsedAt: z.string(),
+  /** Defaults keep `repos.json` files written before remote repositories existed readable. */
+  kind: z.enum(['local', 'remote']).default('local'),
+  /** Forge repository for a remote clone; local folders fill it from `origin` when connected. */
+  remote: RepoRefSchema.nullable().default(null),
 });
 export type Repo = z.infer<typeof RepoSchema>;
 
 export const RepoListSchema = z.array(RepoSchema);
 export const AddRepoRequestSchema = z.object({ path: z.string().min(1) });
+/** A repository URL the user pasted; only a registered forge host is accepted. */
+export const AddRemoteRepoRequestSchema = z.object({ url: z.string().min(1).max(2048) });
 export const ScanRequestSchema = z.object({ path: z.string().min(1) });
 /** Absolute paths of git working trees found under a folder. */
 export const ScanResultSchema = z.array(z.string());
@@ -57,6 +64,27 @@ export const RepoInfoSchema = z.object({
   branches: z.array(z.string()),
 });
 export type RepoInfo = z.infer<typeof RepoInfoSchema>;
+
+// ── Remote clones ───────────────────────────────────────────────────────────
+
+export const CloneInfoSchema = z.object({
+  repoId: z.string(),
+  host: z.string(),
+  project: z.string(),
+  /** Size on disk, computed by walking the clone folder; a missing folder reports 0. */
+  sizeBytes: z.number().int().nonnegative(),
+  lastUsedAt: z.string(),
+});
+export type CloneInfo = z.infer<typeof CloneInfoSchema>;
+export const CloneInfoListSchema = z.array(CloneInfoSchema);
+
+/** When a refresh finished; the UI shows a pending state until then. */
+export const FetchResponseSchema = z.object({ fetchedAt: z.string() });
+export type FetchResponse = z.infer<typeof FetchResponseSchema>;
+
+/** Commit the pull request head was fetched at. */
+export const PullRequestFetchResponseSchema = z.object({ headSha: z.string() });
+export type PullRequestFetchResponse = z.infer<typeof PullRequestFetchResponseSchema>;
 
 // ── Diff ────────────────────────────────────────────────────────────────────
 
