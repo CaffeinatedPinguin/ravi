@@ -19,7 +19,11 @@ const PRELOAD_FILES = 8;
 /** Width of the line-number gutter in pixels; must match `.number` in the stylesheet. */
 const GUTTER = 52;
 
-export type DiffViewHandle = { scrollToFile: (fileIndex: number) => void };
+export type DiffViewHandle = {
+  scrollToFile: (fileIndex: number) => void;
+  /** Rows are virtualized, so a notification link asks for the index rather than a DOM node. */
+  scrollToRow: (rowIndex: number) => void;
+};
 
 type FocusedLine = { fileIndex: number; side: CommentSide; line: number };
 type FocusLineSetter = (fileIndex: number, side: CommentSide, line: number) => void;
@@ -114,8 +118,12 @@ export function DiffView({ session, mode, expandStep, repoPath, store, onActiveF
           scrollRef.current.scrollTop = fileOffset(fileIndex);
         }
       },
+      // `center` leaves context above and below; the caller focuses the row once it is rendered.
+      scrollToRow: (rowIndex) => {
+        virtualizer.scrollToIndex(rowIndex, { align: 'center' });
+      },
     }),
-    [fileOffset],
+    [fileOffset, virtualizer],
   );
 
   const focusLine = useCallback<FocusLineSetter>((fileIndex, side, line) => {
