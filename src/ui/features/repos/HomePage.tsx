@@ -6,6 +6,8 @@ import { apiGet, apiSend } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
+import { TopBarActions } from '../../components/TopBarActions.tsx';
+import page from '../review/ReviewPage.module.css';
 import styles from './HomePage.module.css';
 import { AccountsSection } from './AccountsSection.tsx';
 import { RemoteReposSection } from './RemoteReposSection.tsx';
@@ -53,8 +55,23 @@ export function HomePage({ notice }: { notice: string | null }) {
   const localRepos = repos.data?.filter((repo) => repo.kind !== 'remote') ?? [];
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.title}>revu</h1>
+    <>
+      <header className={page.topBar}>
+        <a
+          className={page.brand}
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate('/');
+          }}
+        >
+          revu
+        </a>
+        <span className={page.spacer} />
+        <TopBarActions />
+      </header>
+      <main className={styles.page}>
+        <h1 className={styles.title}>revu</h1>
 
       <ReviewLaterSection repos={repos.data ?? []} />
 
@@ -134,8 +151,9 @@ export function HomePage({ notice }: { notice: string | null }) {
 
       <RemoteReposSection repos={repos.data ?? []} onReposChanged={repos.reload} />
 
-      <AccountsSection />
-    </main>
+        <AccountsSection />
+      </main>
+    </>
   );
 }
 

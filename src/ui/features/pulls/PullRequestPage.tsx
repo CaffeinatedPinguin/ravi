@@ -10,12 +10,15 @@ import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
 import { ToastHost } from '../../components/Toast.tsx';
+import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { MarkdownView } from '../comments/MarkdownView.tsx';
 import { ReviewNotes } from '../comments/ReviewNotes.tsx';
 import { RemoteThread } from '../comments/Thread.tsx';
 import type { DiffViewHandle } from '../diff/DiffView.tsx';
 import { DiffSession } from '../diff/session.ts';
 import { RepoNav } from '../repos/RepoNav.tsx';
+import threadStyles from '../notifications/Notifications.module.css';
+import { useThreadScroll } from '../notifications/useThreadScroll.ts';
 import { DiffMessage, DiffPane } from '../review/DiffPane.tsx';
 import { DiffStat } from '../review/DiffStat.tsx';
 import page from '../review/ReviewPage.module.css';
@@ -124,6 +127,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
     },
     [fileCount],
   );
+  useThreadScroll(open.data?.threads ?? [], tab, setTab, open.data?.diffSummary.files ?? [], goToFile);
 
   // Same keyboard model as the local review; `c` is handled by the diff itself.
   useEffect(() => {
@@ -169,6 +173,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
           label="Switch between light and dark theme"
           onClick={() => update({ theme: document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark' })}
         />
+        <TopBarActions />
       </header>
 
       {data !== undefined && (
@@ -331,7 +336,9 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
               ) : (
                 <div className={styles.threads}>
                   {conversation.map((thread) => (
-                    <RemoteThread key={thread.id} thread={thread} />
+                    <div key={thread.id} id={`thread-${thread.id}`} className={threadStyles.threadAnchor}>
+                      <RemoteThread thread={thread} />
+                    </div>
                   ))}
                 </div>
               )}
