@@ -10,6 +10,7 @@ import {
   RepoRefSchema,
   ThreadSchema,
 } from './forge.ts';
+import { NotificationFiltersSchema } from './notify.ts';
 import { ImportErrorSchema, ReviewDocumentSchema, ReviewTargetSchema } from './review.ts';
 
 /** Header every mutating request must carry; see `src/server/http/security.ts`. */
@@ -23,6 +24,20 @@ export type Health = z.infer<typeof HealthSchema>;
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
+/**
+ * Background notification settings. The filter fields are shared with the preview request, so the
+ * rules the UI shows are exactly the rules the poller applies.
+ */
+export const NotificationSettingsSchema = NotificationFiltersSchema.extend({
+  enabled: z.boolean().default(true),
+  /** A poll interval short enough to feel live without hammering the forge. */
+  pollMinutes: z.number().int().min(1).max(60).default(5),
+});
+export type NotificationSettings = z.infer<typeof NotificationSettingsSchema>;
+
+/** Parsed here so old settings files (without `notifications`) get every nested default. */
+const defaultNotifications = (): NotificationSettings => NotificationSettingsSchema.parse({});
+
 export const SettingsSchema = z.object({
   viewMode: z.enum(['split', 'unified']).default('unified'),
   ignoreWhitespace: z.boolean().default(false),
@@ -35,8 +50,28 @@ export const SettingsSchema = z.object({
   treeWidth: z.number().int().min(160).max(800).default(300),
   /** Unused partial clones older than this are removed on startup. */
   cloneRetentionDays: z.number().int().min(1).max(3650).default(30),
+  notifications: NotificationSettingsSchema.default(defaultNotifications),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
+
+// The notification payloads live in `notify.ts` (the contract is shared with the poller) but stay
+// reachable through `api.ts`, which every route module and the UI already import.
+export {
+  NotificationFiltersSchema,
+  NotificationListSchema,
+  NotificationPreviewRequestSchema,
+  NotificationPreviewSchema,
+  NotificationReadRequestSchema,
+  NotificationSchema,
+} from './notify.ts';
+export type {
+  Notification,
+  NotificationFilters,
+  NotificationList,
+  NotificationPreview,
+  NotificationPreviewRequest,
+  NotificationReadRequest,
+} from './notify.ts';
 
 // ── Repositories ────────────────────────────────────────────────────────────
 

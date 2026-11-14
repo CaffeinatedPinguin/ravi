@@ -11,6 +11,7 @@ import { pruneClones } from './git/clone.ts';
 import { createHttpServer } from './http/server.ts';
 import type { UiAssets } from './http/static.ts';
 import { findRunningInstance, forgetInstance, loadOrCreateToken, recordInstance } from './instance.ts';
+import { startPoller } from './notify/poller.ts';
 import { openBrowser } from './open-browser.ts';
 import { resolvePaths } from './paths.ts';
 import type { Paths } from './paths.ts';
@@ -86,7 +87,12 @@ export async function run(argv: string[], options: RunOptions): Promise<void> {
   allowedHosts.push(`127.0.0.1:${port}`, `localhost:${port}`);
 
   await recordInstance(paths, { port, pid: process.pid });
-  registerShutdown(server, () => forgetInstance(paths));
+  // Started only after the server is listening: a slow forge must never delay the UI.
+  const notifications = startPoller(paths);
+  registerShutdown(server, async () => {
+    notifications.stop();
+    await forgetInstance(paths);
+  });
 
   const uiHost = options.devUiOrigin ?? `127.0.0.1:${port}`;
   console.log(`revu ${VERSION} listening on http://127.0.0.1:${port}`);
