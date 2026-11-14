@@ -21,9 +21,11 @@ type FileTreeProps = {
   files: readonly DiffFile[];
   activeFile: number;
   onSelect: (fileIndex: number) => void;
+  /** Comments anchored in a file; kept as a callback so the tree never copies the whole document. */
+  commentCount: (path: string) => number;
 };
 
-export function FileTree({ files, activeFile, onSelect }: FileTreeProps) {
+export function FileTree({ files, activeFile, onSelect, commentCount }: FileTreeProps) {
   const [filter, setFilter] = useState('');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const items = useMemo(() => buildTreeItems(files, filter, collapsed), [files, filter, collapsed]);
@@ -93,6 +95,7 @@ export function FileTree({ files, activeFile, onSelect }: FileTreeProps) {
             if (!file) {
               return null;
             }
+            const comments = commentCount(file.path);
             return (
               <button
                 key={`f:${item.fileIndex}`}
@@ -107,6 +110,11 @@ export function FileTree({ files, activeFile, onSelect }: FileTreeProps) {
                   {STATUS_LETTER[file.status]}
                 </span>
                 <span className={styles.name}>{item.name}</span>
+                {comments > 0 && (
+                  <span className={styles.comments} aria-label={`${comments} comments`} title={`${comments} comments`}>
+                    {comments}
+                  </span>
+                )}
                 <span className={styles.counts}>
                   {file.additions > 0 && <span className={styles.add}>+{file.additions}</span>}
                   {file.deletions > 0 && <span className={styles.del}>−{file.deletions}</span>}
