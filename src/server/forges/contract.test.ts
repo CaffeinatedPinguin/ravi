@@ -60,8 +60,9 @@ describe('strategy skeletons', () => {
     expect(forge.cloneUrl(gitlabRepo)).toBe('https://gitlab.com/group/sub/api.git');
   });
 
-  it('reports every network method as not implemented', async () => {
-    const forge = createGitHubForge(githubHost, http);
+  it('reports every GitLab network method as not implemented', async () => {
+    // The GitHub strategy is complete and covered by github.test.ts.
+    const forge = createGitLabForge(gitlabHost, http);
     const pr = {} as PullRequest;
     await expect(forge.currentUser()).rejects.toThrow('Not implemented yet');
     await expect(forge.listPullRequests(repo, { state: 'open' })).rejects.toThrow('Not implemented yet');
