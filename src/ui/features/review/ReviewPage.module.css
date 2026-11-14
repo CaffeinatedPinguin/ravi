@@ -1,12 +1,13 @@
 .page {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
 .topBar,
 .toolbar {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 12px;
   padding: 0 12px;
@@ -110,6 +111,7 @@
 
 .body {
   display: grid;
+  flex: 1;
   min-height: 0;
 }
 
@@ -201,4 +203,26 @@
 
 .hint {
   color: var(--text-faint);
+}
+
+.transfer {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Covers the page only while files are dragged; pointer events stay off so the composer still
+   receives its own image drop. */
+.dropOverlay {
+  position: fixed;
+  inset: 12px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  color: var(--text);
+  font-weight: 600;
+  pointer-events: none;
 }

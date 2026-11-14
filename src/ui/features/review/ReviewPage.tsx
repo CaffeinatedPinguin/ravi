@@ -1,14 +1,19 @@
 /** The review screen for one repository: top bar, review toolbar, file tree and the diff. */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { DiffSummarySchema, RepoInfoSchema, RepoListSchema } from '../../../shared/api.ts';
+import type { DragEvent } from 'react';
+import { DiffSummarySchema, RepoInfoSchema, RepoListSchema, ReviewExportResponseSchema } from '../../../shared/api.ts';
 import type { DiffOptions, DiffTarget } from '../../../shared/api.ts';
-import type { ReviewTarget } from '../../../shared/review.ts';
+import type { ReviewDocument, ReviewTarget } from '../../../shared/review.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
-import { ToastHost } from '../../components/Toast.tsx';
+import { showToast, ToastHost } from '../../components/Toast.tsx';
+import { downloadMarkdown, reviewFileName } from '../comments/download.ts';
+import { isImportableFile, readImportFile } from '../comments/importFile.ts';
+import { ImportDialog } from '../comments/ImportDialog.tsx';
+import { ReviewNotes } from '../comments/ReviewNotes.tsx';
 import { ReviewStore } from '../comments/reviewStore.ts';
 import { DiffView } from '../diff/DiffView.tsx';
 import type { DiffViewHandle } from '../diff/DiffView.tsx';
@@ -23,6 +28,8 @@ import { formatUpdatedAgo, useAutoRefresh } from './useAutoRefresh.ts';
 
 const NO_SUBSCRIBE = () => () => undefined;
 const ZERO = () => 0;
+
+type ImportSeed = { markdown: string; fileName: string };
 
 type ReviewPageProps = { repoId: string; targetParam: string | null };
 
@@ -89,6 +96,133 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   const [activeFile, setActiveFile] = useState(0);
   const fileCount = summary.data?.files.length ?? 0;
 
+  // Review-level UI state: the notes panel and the import dialog (with text read from a drop).
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importSeed, setImportSeed] = useState<ImportSeed | null>(null);
+  const [importKey, setImportKey] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
+
+  const openImport = useCallback((seed: ImportSeed | null = null) => {
+    setImportSeed(seed);
+    setImportKey((value) => value + 1);
+    setImportOpen(true);
+  }, []);
+  const closeImport = useCallback(() => {
+    setImportOpen(false);
+    setImportSeed(null);
+  }, []);
+  const applyImport = useCallback(
+    (document: ReviewDocument) => {
+      if (!store) {
+        return;
+      }
+      const undo = store.replaceDocument(document);
+      closeImport();
+      showToast({ message: 'Review imported', action: { label: 'Undo', onClick: undo } }, 8000);
+    },
+    [store, closeImport],
+  );
+
+  const dropImport = useCallback(
+    async (file: File) => {
+      try {
+        const markdown = await readImportFile(file);
+        openImport({ markdown, fileName: file.name });
+      } catch (reason) {
+        showToast({ message: reason instanceof Error ? reason.message : 'Could not read the file' });
+      }
+    },
+    [openImport],
+  );
+
+  const hasFiles = (event: DragEvent<HTMLDivElement>) => event.dataTransfer.types.includes('Files');
+  const onDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(event)) {
+      return;
+    }
+    event.preventDefault();
+    dragDepth.current += 1;
+    setDragging(true);
+  };
+  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+  };
+  const onDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasFiles(event)) {
+      return;
+    }
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) {
+      setDragging(false);
+    }
+  };
+  const onDrop = (event: DragEvent<HTMLDivElement>) => {
+    // Always stop the browser from navigating to the dropped file.
+    event.preventDefault();
+    dragDepth.current = 0;
+    setDragging(false);
+    const file = event.dataTransfer.files[0];
+    // Image drops belong to the comment composer; only a review text file opens the import dialog.
+    if (file && isImportableFile(file)) {
+      void dropImport(file);
+    }
+  };
+
+  const repoName = repo?.name ?? repoId;
+  const hasContent = store !== null && (store.document.comments.length > 0 || (store.document.summary ?? '').trim() !== '');
+  const generalCount = store?.document.comments.filter((comment) => comment.path === null).length ?? 0;
+
+  const exportReview = useCallback(async (): Promise<{ markdown: string; count: number } | null> => {
+    if (!store) {
+      return null;
+    }
+    const document = store.document;
+    const { markdown } = await apiSend(
+      'POST',
+      '/api/reviews/export',
+      { repoId, diffTarget: target, document },
+      ReviewExportResponseSchema,
+    );
+    return { markdown, count: document.comments.length };
+  }, [store, repoId, target]);
+
+  const copyReview = useCallback(async () => {
+    if (!hasContent) {
+      return;
+    }
+    try {
+      const exported = await exportReview();
+      if (!exported) {
+        return;
+      }
+      await navigator.clipboard.writeText(exported.markdown);
+      showToast({ message: `Copied ${exported.count} ${exported.count === 1 ? 'comment' : 'comments'} for AI` });
+    } catch (reason) {
+      showToast({ message: reason instanceof Error ? reason.message : 'Could not copy the review' });
+    }
+  }, [hasContent, exportReview]);
+
+  const saveReview = useCallback(async () => {
+    if (!hasContent) {
+      return;
+    }
+    try {
+      const exported = await exportReview();
+      if (!exported) {
+        return;
+      }
+      downloadMarkdown(reviewFileName(repoName, encodeTarget(target)), exported.markdown);
+    } catch (reason) {
+      showToast({ message: reason instanceof Error ? reason.message : 'Could not save the review' });
+    }
+  }, [hasContent, exportReview, repoName, target]);
+
   // The last load is the moment the "updated N s ago" label counts from.
   const updatedAt = useAutoRefresh({ repoId, target, loaded: summary.data, onReload: summary.reload });
   const [now, setNow] = useState(() => Date.now());
@@ -112,10 +246,28 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   );
 
   // j / k step through files, as in most review tools; r reloads without reaching for the mouse.
+  // Shift+C / Shift+S / Shift+I are the Markdown transfer actions.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const typing = event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable]');
       if (typing || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (event.shiftKey) {
+        if (event.repeat) {
+          return;
+        }
+        if (key === 'c') {
+          event.preventDefault();
+          void copyReview();
+        } else if (key === 's') {
+          event.preventDefault();
+          void saveReview();
+        } else if (key === 'i' && !importOpen) {
+          event.preventDefault();
+          openImport();
+        }
         return;
       }
       if (event.key === 'j') {
@@ -128,10 +280,16 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeFile, goToFile, reloadSummary]);
+  }, [activeFile, goToFile, reloadSummary, copyReview, saveReview, openImport, importOpen]);
 
   return (
-    <div className={styles.page}>
+    <div
+      className={styles.page}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <header className={styles.topBar}>
         <a
           className={styles.brand}
@@ -189,6 +347,29 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         <span className={styles.updated} aria-live="polite">
           {updatedAt !== null && formatUpdatedAgo(now, updatedAt)}
         </span>
+        {store && (
+          <Button
+            aria-expanded={notesOpen}
+            aria-controls="review-notes"
+            title="Show or hide review notes"
+            onClick={() => setNotesOpen((value) => !value)}
+          >
+            Notes ({generalCount})
+          </Button>
+        )}
+        {store && (
+          <div className={styles.transfer} role="group" aria-label="Review Markdown">
+            <Button icon="upload" title="Import review Markdown (Shift+I)" onClick={() => openImport()}>
+              Import
+            </Button>
+            <Button icon="copy" title="Copy review Markdown for AI (Shift+C)" disabled={!hasContent} onClick={() => void copyReview()}>
+              Copy
+            </Button>
+            <Button icon="download" title="Save review Markdown (Shift+S)" disabled={!hasContent} onClick={() => void saveReview()}>
+              Save
+            </Button>
+          </div>
+        )}
         {store && <SaveStatus status={store.saveStatus} onRetry={() => void store.retry()} />}
         <IconButton
           icon="refresh"
@@ -198,6 +379,8 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           onClick={summary.reload}
         />
       </div>
+
+      {store && notesOpen && <ReviewNotes store={store} onClose={() => setNotesOpen(false)} />}
 
       <div className={styles.body} style={{ gridTemplateColumns: `${treeWidth}px 5px 1fr` }}>
         {summary.error !== null && (
@@ -242,6 +425,22 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           </>
         )}
       </div>
+      {dragging && (
+        <div className={styles.dropOverlay} aria-hidden="true">
+          Drop a .md or .txt file to import a review
+        </div>
+      )}
+      {store && importOpen && (
+        <ImportDialog
+          key={importKey}
+          repoId={repoId}
+          diffTarget={target}
+          currentDocument={store.document}
+          initialMarkdown={importSeed?.markdown ?? ''}
+          onClose={closeImport}
+          onApply={applyImport}
+        />
+      )}
       <ToastHost />
     </div>
   );

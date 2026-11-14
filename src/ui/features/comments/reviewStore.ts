@@ -128,6 +128,60 @@ export class ReviewStore {
     });
   }
 
+  /** Review-level summary; an empty textarea clears it instead of storing whitespace. */
+  setSummary(summary: string | null): void {
+    const value = summary !== null && summary.trim() === '' ? null : summary;
+    if (value === this.doc.summary) {
+      return;
+    }
+    this.mutate({ ...this.doc, summary: value });
+  }
+
+  /** A comment on the whole review: no file, side or line, so it only lives in the notes panel. */
+  addGeneral(body: string): string {
+    const now = new Date().toISOString();
+    const id = `l-${randomId()}`;
+    this.mutate({
+      ...this.doc,
+      comments: [
+        ...this.doc.comments,
+        {
+          id,
+          parentId: null,
+          path: null,
+          side: 'new',
+          line: null,
+          startLine: null,
+          body,
+          author: null,
+          state: 'draft',
+          createdAt: now,
+          updatedAt: now,
+          codeContext: null,
+          outdated: false,
+        },
+      ],
+    });
+    return id;
+  }
+
+  /**
+   * Replaces the whole document (an import) through the normal debounced save. The returned
+   * function restores the previous document, so an import can be undone from the toast.
+   */
+  replaceDocument(document: ReviewDocument): () => void {
+    const previous = this.doc;
+    this.mutate(document);
+    let undone = false;
+    return () => {
+      if (undone) {
+        return;
+      }
+      undone = true;
+      this.mutate(previous);
+    };
+  }
+
   /** Deletes a comment and its replies; the returned function puts all of them back in place. */
   remove(id: string): () => void {
     const removedIds = new Set([id]);

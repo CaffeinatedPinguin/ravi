@@ -9,6 +9,8 @@ const PATHS = {
   search: 'M7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10zM10.7 10.7 14 14',
   refresh: 'M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3',
   copy: 'M5.5 5.5h8v8h-8zM2.5 10.5v-8h8',
+  upload: 'M8 11V2M4.5 5.5 8 2l3.5 3.5M2.5 11v3h11v-3',
+  download: 'M8 2v9M4.5 7.5 8 11l3.5-3.5M2.5 11v3h11v-3',
   external: 'M9 2.5h4.5V7M13.5 2.5 7.5 8.5M11.5 9.5v4h-9v-9h4',
   split: 'M1.5 2.5h13v11h-13zM8 2.5v11',
   unified: 'M1.5 2.5h13v11h-13zM1.5 8h13',

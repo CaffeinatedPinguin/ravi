@@ -2,8 +2,8 @@
  * Image attachment upload. The server validates magic bytes and the declared type again, so this
  * side only gives the user a fast, readable rejection before a round trip.
  */
+import { AssetUploadResponseSchema } from '../../../shared/api.ts';
 import { apiSend } from '../../app/api.ts';
-import { AssetResponseSchema } from './types.ts';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
@@ -16,7 +16,7 @@ export async function uploadImage(file: File): Promise<string> {
     throw new Error('Images must be 10 MiB or smaller.');
   }
   const dataBase64 = await readBase64(file);
-  const { id } = await apiSend('POST', '/api/assets', { name: file.name, type: file.type, dataBase64 }, AssetResponseSchema);
+  const { id } = await apiSend('POST', '/api/assets', { name: file.name, type: file.type, dataBase64 }, AssetUploadResponseSchema);
   return id;
 }
 

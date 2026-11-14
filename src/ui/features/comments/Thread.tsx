@@ -9,23 +9,27 @@ import type { ReviewStore } from './reviewStore.ts';
 import type { CommentThread } from './threads.ts';
 import { isOutsideThreadKey, relativeTime } from './threads.ts';
 
-type ThreadRowProps = { threads: readonly CommentThread[]; store: ReviewStore };
+type ThreadRowProps = { threads: readonly CommentThread[]; store: ReviewStore; reviewLevel?: boolean };
 
-export function ThreadRow({ threads, store }: ThreadRowProps) {
+export function ThreadRow({ threads, store, reviewLevel = false }: ThreadRowProps) {
   if (threads.length === 0) {
-    return null;
+    return reviewLevel ? <p className={styles.noComments}>No general comments yet.</p> : null;
   }
-  const outside = isOutsideThreadKey(threads[0]?.key ?? '');
+  const outside = !reviewLevel && isOutsideThreadKey(threads[0]?.key ?? '');
   return (
-    <div className={styles.threads}>
+    <div className={reviewLevel ? styles.notesThreads : styles.threads}>
       {outside && <p className={styles.outside}>Comments outside the shown lines</p>}
       {threads.map((thread) => (
         <section
           key={thread.key}
-          className={styles.thread}
-          aria-label={`Comments on line ${thread.startLine === null ? thread.line : `${thread.startLine}-${thread.line}`}`}
+          className={reviewLevel ? `${styles.thread} ${styles.noteThread}` : styles.thread}
+          aria-label={
+            reviewLevel
+              ? 'General comments'
+              : `Comments on line ${thread.startLine === null ? thread.line : `${thread.startLine}-${thread.line}`}`
+          }
         >
-          {thread.startLine !== null && (
+          {!reviewLevel && thread.startLine !== null && (
             <p className={styles.range}>
               Lines {thread.startLine}–{thread.line}
             </p>
