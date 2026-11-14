@@ -238,4 +238,33 @@ describe('toMarkdown / fromMarkdown', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]?.line).toBe(2000 * 2 + 1);
   });
+
+  it('round-trips the normal fields when a comment carries the send bookkeeping', () => {
+    const doc: ReviewDocument = {
+      version: 1,
+      target: GITHUB,
+      baseSha: null,
+      headSha: null,
+      action: 'comment',
+      summary: null,
+      comments: [
+        comment({
+          id: 'l-1',
+          path: 'src/a.ts',
+          line: 5,
+          body: 'reply text',
+          state: 'draft',
+          remoteThreadId: 'T1',
+          remoteCommentId: 'c-9',
+          pendingAction: 'edit',
+          sendError: 'network down',
+        }),
+      ],
+    };
+
+    const result = fromMarkdown(toMarkdown(doc));
+    expect(result.errors).toEqual([]);
+    // The codec ignores the local send fields; the review text is unchanged.
+    expect(result.comments.map(pick)).toEqual(doc.comments.map(pick));
+  });
 });

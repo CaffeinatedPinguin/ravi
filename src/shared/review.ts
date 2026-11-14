@@ -20,7 +20,7 @@ export const ReviewActionSchema = z.enum(['comment', 'approve', 'requestChanges'
 /** Review-level action sent together with the comments. */
 export type ReviewAction = z.infer<typeof ReviewActionSchema>;
 
-export const ReviewCommentSchema = z.object({
+const ReviewCommentFields = {
   /** Stable id: `l-` + random while local, the forge's plain id once published. */
   id: z.string().min(1),
   /** Comment this one replies to, or null for a top-level comment. */
@@ -47,7 +47,24 @@ export const ReviewCommentSchema = z.object({
   codeContext: z.string().nullable(),
   /** True when the forge reports the commented code as no longer present. */
   outdated: z.boolean(),
-});
+  /**
+   * Forge thread this draft answers. A reply is only possible once the parent exists on the forge;
+   * a reply to another local draft is folded into the parent's body instead (see `outbox.ts`).
+   */
+  remoteThreadId: z.string().nullable().optional(),
+  /** Forge comment an edit or delete targets; null unless `pendingAction` is set. */
+  remoteCommentId: z.string().nullable().optional(),
+  /** Local intent to change an existing remote comment instead of adding a new one. */
+  pendingAction: z.enum(['edit', 'delete']).nullable().optional(),
+  /** Why the last send of this draft failed, so the UI can offer a retry; null otherwise. */
+  sendError: z.string().nullable().optional(),
+};
+
+/**
+ * The send fields are optional so a document written before they existed still parses; every
+ * reader treats a missing value like `null`.
+ */
+export const ReviewCommentSchema = z.object(ReviewCommentFields);
 export type ReviewComment = z.infer<typeof ReviewCommentSchema>;
 
 export const ReviewTargetSchema = z.discriminatedUnion('kind', [
@@ -94,12 +111,17 @@ export type ReviewDocument = z.infer<typeof ReviewDocumentSchema>;
  * A comment read from Markdown. The text carries no local state and may carry no id (a hand-written
  * comment), so the caller assigns ids and parent links that are missing.
  */
-export const ImportedCommentSchema = ReviewCommentSchema.omit({
+export const ImportedCommentSchema = z.object(ReviewCommentFields).omit({
   state: true,
   createdAt: true,
   updatedAt: true,
   codeContext: true,
   outdated: true,
+  // Send bookkeeping never comes from Markdown; the codec is a lossless view of the review text.
+  remoteThreadId: true,
+  remoteCommentId: true,
+  pendingAction: true,
+  sendError: true,
 }).extend({
   /** Forge id when the export had one; null when the caller must assign a local id. */
   id: z.string().nullable(),
