@@ -3,12 +3,18 @@
  * The UI compares it on focus to decide whether reloading a diff is worth it.
  */
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { lstat, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DiffTarget } from '../../shared/api.ts';
 import { resolveTarget } from './diff.ts';
 import { GitError, gitText } from './exec.ts';
 import { resolveCommit } from './repo.ts';
+
+/**
+ * A diff can list thousands of paths; stat is cheap, but an unbounded `Promise.all` would exhaust
+ * file handles on Windows, so metadata is fetched in small sequential batches.
+ */
+const STAT_BATCH = 64;
 
 export async function diffFingerprint(root: string, target: DiffTarget): Promise<string> {
   const resolved = await resolveTarget(root, target);
@@ -37,7 +43,7 @@ export async function diffFingerprint(root: string, target: DiffTarget): Promise
   hash.update(status);
   hash.update('\0');
   // Content ids of the target's diff: staging, deleting or renaming changes them. For a worktree
-  // side git prints an all-zero id, so `worktree` below supplies the bytes that are really there.
+  // side git prints an all-zero id, so `worktree` below supplies the metadata that is really there.
   hash.update(raw);
   hash.update('\0');
   hash.update(worktree);
@@ -45,22 +51,31 @@ export async function diffFingerprint(root: string, target: DiffTarget): Promise
 }
 
 /**
- * Hashes the current bytes of files that differ on the working-tree side.
- * Without this, editing an already-modified file would leave both the status and the raw diff
- * unchanged (git reports `0000000` for worktree blobs), so a focus would miss the edit.
+ * Describes files that differ on the working-tree side by their metadata.
+ * Git prints an all-zero id for worktree blobs, so without this input editing an already-modified
+ * file would leave both the status and the raw diff unchanged. Size + mtime answer "did anything
+ * on disk change" without reading the bytes: a focus refresh must not read hundreds of megabytes
+ * of a large generated file just to decide whether a reload is needed.
  */
 async function worktreeContent(root: string, args: string[]): Promise<string> {
   const output = await gitText(root, ['diff', '--name-only', '--diff-filter=ACMRT', '-z', ...args, '--']);
   const paths = output.split('\0').filter(Boolean).sort();
   const hash = createHash('sha256');
-  for (const path of paths) {
-    hash.update(path);
-    hash.update('\0');
-    try {
-      hash.update(await readFile(join(root, path)));
-    } catch {
-      // A file that disappeared between listing and reading is already covered by `status`.
-    }
+  for (let start = 0; start < paths.length; start += STAT_BATCH) {
+    const entries = await Promise.all(
+      paths.slice(start, start + STAT_BATCH).map(async (path) => {
+        try {
+          // stat follows a symlink, whose target's metadata is what changes; lstat covers a dangling
+          // link, whose own metadata still changes when it is relinked.
+          const info = await stat(join(root, path)).catch(() => lstat(join(root, path)));
+          return `${path}\0${info.size}:${info.mtimeMs}`;
+        } catch {
+          // A file that disappeared between listing and stat is already covered by `status`.
+          return `${path}\0missing`;
+        }
+      }),
+    );
+    hash.update(entries.join('\0'));
     hash.update('\0');
   }
   return hash.digest('hex');

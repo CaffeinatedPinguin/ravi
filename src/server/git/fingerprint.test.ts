@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -56,8 +56,8 @@ describe('diffFingerprint', () => {
     // Nothing changed between two reads: focus refresh must stay quiet.
     expect(await diffFingerprint(root, target)).toBe(afterFirstEdit);
 
-    // Same path, same status, and git prints a zero blob id for the worktree side:
-    // the fingerprint only notices this second edit by hashing the file's bytes.
+    // Same path, same status, and git prints a zero blob id for the worktree side: the fingerprint
+    // only notices this second edit through the file's metadata (here the size also changes).
     writeFileSync(join(root, 'a.txt'), 'five!!\n');
     const afterSecondEdit = await diffFingerprint(root, target);
     expect(afterSecondEdit).not.toBe(afterFirstEdit);
@@ -65,6 +65,20 @@ describe('diffFingerprint', () => {
     writeFileSync(join(root, 'new.txt'), 'untracked\n');
     const afterUntracked = await diffFingerprint(root, target);
     expect(afterUntracked).not.toBe(afterSecondEdit);
+  });
+
+  it('notices an mtime-only change without reading the file contents', async () => {
+    const target = { kind: 'uncommitted' as const };
+    writeFileSync(join(root, 'a.txt'), 'three\n');
+    const before = await diffFingerprint(root, target);
+
+    // Rewriting identical bytes keeps the size and the content; only the timestamp moves, as a
+    // checkout or a tool touching the file can do. A byte hash would miss this, so metadata must
+    // be part of the fingerprint.
+    writeFileSync(join(root, 'a.txt'), 'three\n');
+    const now = new Date();
+    utimesSync(join(root, 'a.txt'), now, new Date(now.getTime() + 5000));
+    expect(await diffFingerprint(root, target)).not.toBe(before);
   });
 
   it('describes a commit range by its two commit ids and ignores working-tree changes', async () => {
