@@ -8,13 +8,16 @@
  */
 import { BlobSchema, PatchesSchema } from '../../../shared/api.ts';
 import type { DiffFile, DiffOptions, DiffSummary } from '../../../shared/api.ts';
+import type { ReviewComment } from '../../../shared/review.ts';
 import { apiSend } from '../../app/api.ts';
+import type { CommentThread } from '../comments/threads.ts';
+import { groupThreads, isOutsideThreadKey, pathFromOutsideThreadKey } from '../comments/threads.ts';
 import { highlightLines, languageForPath } from './highlight.ts';
 import type { LineTokens } from './highlight.ts';
 import { parsePatch } from './patch.ts';
 import type { DiffLine, Hunk } from './patch.ts';
-import { buildFileRows, gapRange, isLargeFile, rowHeight } from './rows.ts';
-import type { FileView, GapExpansion, Row, ViewMode } from './rows.ts';
+import { buildFileRows, gapRange, isLargeFile, visibleThreadKeys } from './rows.ts';
+import type { ComposerTarget, FileView, GapExpansion, Row, ViewMode } from './rows.ts';
 
 /** Files requested in one patches call; bounded because paths travel as git arguments. */
 const BATCH_SIZE = 40;
@@ -38,9 +41,15 @@ export class DiffSession {
   private readonly rowCache: Array<Row[] | null>;
   private readonly tokens = new Map<number, FileTokens>();
   private readonly highlightRequested = new Set<number>();
+  /** Diff files by path; comments come with a path, not a file index. */
+  private readonly fileIndexesByPath = new Map<string, number[]>();
+  private commentsByPath = new Map<string, readonly ReviewComment[]>();
+  private threadsByPath = new Map<string, CommentThread[]>();
+  private threadsByKey = new Map<string, CommentThread[]>();
+  private commentCounts = new Map<string, number>();
+  private readonly composers = new Map<number, ComposerTarget>();
   /** Row index at which each file starts; rebuilt lazily after any change. */
   private starts: number[] | null = null;
-  private pixelStarts: number[] = [];
   private totalRows = 0;
   private version = 0;
   private readonly listeners = new Set<() => void>();
@@ -62,6 +71,11 @@ export class DiffSession {
       blob: null,
     }));
     this.rowCache = summary.files.map(() => null);
+    for (const [index, file] of summary.files.entries()) {
+      const indexes = this.fileIndexesByPath.get(file.path) ?? [];
+      indexes.push(index);
+      this.fileIndexesByPath.set(file.path, indexes);
+    }
   }
 
   // ── Subscription (useSyncExternalStore) ──────────────────────────────────
@@ -96,19 +110,8 @@ export class DiffSession {
     return this.ensureLayout()[fileIndex] ?? 0;
   }
 
-  /** Vertical position of a file header, in pixels from the top of the diff. */
-  filePixelStart(fileIndex: number): number {
-    this.ensureLayout();
-    return this.pixelStarts[fileIndex] ?? 0;
-  }
-
   fileIndexAtRow(index: number): number {
     return lastIndexAtOrBelow(this.ensureLayout(), index);
-  }
-
-  fileIndexAtPixel(offset: number): number {
-    this.ensureLayout();
-    return lastIndexAtOrBelow(this.pixelStarts, offset);
   }
 
   view(fileIndex: number): FileView | undefined {
@@ -119,6 +122,51 @@ export class DiffSession {
     return this.tokens.get(fileIndex);
   }
 
+  /** Number of comments (replies included) anchored in a file; shown in its header and in the tree. */
+  commentCount(path: string): number {
+    return this.commentCounts.get(path) ?? 0;
+  }
+
+  /** Threads behind a row key; an outside key collects every thread the visible hunks cannot show. */
+  threadsOf(key: string): readonly CommentThread[] {
+    if (!isOutsideThreadKey(key)) {
+      return this.threadsByKey.get(key) ?? [];
+    }
+    const path = pathFromOutsideThreadKey(key);
+    const visible = new Set<string>();
+    for (const index of this.fileIndexesByPath.get(path) ?? []) {
+      for (const rowKey of visibleThreadKeys(this.rowsOf(index), path)) {
+        visible.add(rowKey);
+      }
+    }
+    return (this.threadsByPath.get(path) ?? []).filter((thread) => !visible.has(thread.key));
+  }
+
+  composerFor(fileIndex: number): ComposerTarget | null {
+    return this.composers.get(fileIndex) ?? null;
+  }
+
+  /** Opens the inline composer; shift-click on another line of the same side extends the range. */
+  openComposer(fileIndex: number, side: ComposerTarget['side'], line: number, extend = false): void {
+    const current = this.composers.get(fileIndex);
+    const target: ComposerTarget =
+      extend && current !== undefined && current.side === side
+        ? {
+            side,
+            startLine: Math.min(current.startLine ?? current.line, line),
+            line: Math.max(current.startLine ?? current.line, line),
+          }
+        : { side, line, startLine: null };
+    this.composers.set(fileIndex, target);
+    this.invalidate([fileIndex]);
+  }
+
+  closeComposer(fileIndex: number): void {
+    if (this.composers.delete(fileIndex)) {
+      this.invalidate([fileIndex]);
+    }
+  }
+
   // ── Commands ─────────────────────────────────────────────────────────────
 
   setMode(mode: ViewMode): void {
@@ -127,6 +175,57 @@ export class DiffSession {
       this.rowCache.fill(null);
       this.changed();
     }
+  }
+
+  /**
+   * Replaces the review comments and invalidates only the files whose comments changed.
+   * The store creates new objects for edits and keeps the rest by reference, so a cheap identity
+   * comparison is enough; work stays proportional to the comments, not to the file count.
+   */
+  setComments(comments: readonly ReviewComment[]): void {
+    const byPath = new Map<string, ReviewComment[]>();
+    const counts = new Map<string, number>();
+    for (const comment of comments) {
+      if (comment.path === null) {
+        continue;
+      }
+      const list = byPath.get(comment.path) ?? [];
+      list.push(comment);
+      byPath.set(comment.path, list);
+      counts.set(comment.path, (counts.get(comment.path) ?? 0) + 1);
+    }
+    const changed: string[] = [];
+    for (const [path, list] of byPath) {
+      if (!sameComments(this.commentsByPath.get(path), list)) {
+        changed.push(path);
+      }
+    }
+    for (const path of this.commentsByPath.keys()) {
+      if (!byPath.has(path)) {
+        changed.push(path);
+      }
+    }
+    if (changed.length === 0) {
+      return;
+    }
+    this.commentsByPath = byPath;
+    this.commentCounts = counts;
+    this.threadsByPath = new Map();
+    this.threadsByKey = new Map();
+    for (const thread of groupThreads(comments)) {
+      const forPath = this.threadsByPath.get(thread.path) ?? [];
+      forPath.push(thread);
+      this.threadsByPath.set(thread.path, forPath);
+      const forKey = this.threadsByKey.get(thread.key) ?? [];
+      forKey.push(thread);
+      this.threadsByKey.set(thread.key, forKey);
+    }
+    for (const path of changed) {
+      for (const index of this.fileIndexesByPath.get(path) ?? []) {
+        this.rowCache[index] = null;
+      }
+    }
+    this.changed();
   }
 
   /** Asks for the patches of files that are about to be visible; requests are batched. */
@@ -339,7 +438,9 @@ export class DiffSession {
     let rows = this.rowCache[fileIndex];
     if (!rows) {
       const view = this.views[fileIndex];
-      rows = view ? buildFileRows(view, this.mode) : [];
+      rows = view
+        ? buildFileRows(view, this.mode, this.threadsByPath.get(view.file.path) ?? [], this.composerFor(fileIndex))
+        : [];
       this.rowCache[fileIndex] = rows;
     }
     return rows;
@@ -350,23 +451,26 @@ export class DiffSession {
       return this.starts;
     }
     const starts: number[] = [];
-    const pixelStarts: number[] = [];
     let rowTotal = 0;
-    let pixelTotal = 0;
     for (let index = 0; index < this.views.length; index++) {
       starts.push(rowTotal);
-      pixelStarts.push(pixelTotal);
-      const rows = this.rowsOf(index);
-      rowTotal += rows.length;
-      for (const row of rows) {
-        pixelTotal += rowHeight(row);
-      }
+      rowTotal += this.rowsOf(index).length;
     }
     this.starts = starts;
-    this.pixelStarts = pixelStarts;
     this.totalRows = rowTotal;
     return starts;
   }
+}
+
+/** Objects are immutable in the store, so unchanged comments keep their identity. */
+function sameComments(left: readonly ReviewComment[] | undefined, right: readonly ReviewComment[]): boolean {
+  if (left === undefined) {
+    return right.length === 0;
+  }
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((comment, index) => comment === right[index]);
 }
 
 /** Index of the last element of an ascending array that is ≤ `value` (binary search). */

@@ -97,6 +97,17 @@
   color: var(--del-text);
 }
 
+.comments {
+  flex: none;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font: 600 10px var(--font-ui);
+  text-align: center;
+}
+
 .counts {
   flex: none;
   display: flex;

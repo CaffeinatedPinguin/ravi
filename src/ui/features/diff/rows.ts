@@ -2,13 +2,16 @@
  * Turns one file of a diff into the flat list of rows the virtualized scroller renders.
  *
  * Everything on screen is a row with a known height: the file header, hunk separators ("gaps")
- * that can reveal hidden context, code lines, and notices. Keeping rows flat and heights fixed is
- * what lets one scroller handle thousands of files.
+ * that can reveal hidden context, code lines, comment threads and notices. Code rows keep a fixed
+ * height so the virtualizer can estimate them; thread and composer rows are measured after mount.
  */
 import type { DiffFile } from '../../../shared/api.ts';
+import type { CommentSide } from '../../../shared/review.ts';
+import type { CommentThread } from '../comments/threads.ts';
+import { outsideThreadKey, partitionThreads, threadKey } from '../comments/threads.ts';
 import type { DiffLine, Hunk, ParsedPatch } from './patch.ts';
 
-export const ROW_HEIGHT = { file: 41, line: 20, gap: 28, notice: 56 } as const;
+export const ROW_HEIGHT = { file: 41, line: 20, gap: 28, notice: 56, thread: 120, composer: 190 } as const;
 
 /** Files with more changed lines than this are not rendered until the user asks. */
 export const LARGE_FILE_CHANGES = 1500;
@@ -17,6 +20,9 @@ export type ViewMode = 'split' | 'unified';
 
 /** How many hidden lines of a gap are revealed, counted from its top and from its bottom. */
 export type GapExpansion = { top: number; bottom: number };
+
+/** Where the inline composer sits; `line` is the last line of a range. */
+export type ComposerTarget = { side: CommentSide; line: number; startLine: number | null };
 
 export type Row =
   | { kind: 'file' }
@@ -32,7 +38,9 @@ export type Row =
       canExpandUp: boolean;
       canExpandDown: boolean;
     }
-  | { kind: 'notice'; notice: 'loading' | 'error' | 'binary' | 'large' | 'empty'; height: number };
+  | { kind: 'notice'; notice: 'loading' | 'error' | 'binary' | 'large' | 'empty'; height: number }
+  | { kind: 'thread'; threadKey: string }
+  | { kind: 'composer'; side: CommentSide; line: number; startLine: number | null };
 
 export type FileView = {
   file: DiffFile;
@@ -56,14 +64,28 @@ export function rowHeight(row: Row): number {
       return ROW_HEIGHT.gap;
     case 'notice':
       return row.height;
+    case 'thread':
+      return ROW_HEIGHT.thread;
+    case 'composer':
+      return ROW_HEIGHT.composer;
   }
+}
+
+/** Thread and composer rows size themselves; the virtualizer measures them after they render. */
+export function isMeasuredRow(row: Row): boolean {
+  return row.kind === 'thread' || row.kind === 'composer';
 }
 
 export function isLargeFile(file: DiffFile): boolean {
   return file.additions + file.deletions > LARGE_FILE_CHANGES;
 }
 
-export function buildFileRows(view: FileView, mode: ViewMode): Row[] {
+export function buildFileRows(
+  view: FileView,
+  mode: ViewMode,
+  threads: readonly CommentThread[] = [],
+  composer: ComposerTarget | null = null,
+): Row[] {
   const rows: Row[] = [{ kind: 'file' }];
   if (view.collapsed) {
     return rows;
@@ -86,11 +108,106 @@ export function buildFileRows(view: FileView, mode: ViewMode): Row[] {
   } else {
     pushHunkRows(rows, view, load.patch.hunks, mode);
   }
+  insertCommentRows(rows, file.path, threads, composer);
   return rows;
 }
 
 function notice(kind: 'error' | 'binary' | 'large' | 'empty'): Row {
   return { kind: 'notice', notice: kind, height: ROW_HEIGHT.notice };
+}
+
+/**
+ * Inserts thread rows after the line they belong to. A comment whose line is not in the current
+ * hunks/expansions would otherwise vanish; it is collected in one row under the file header.
+ */
+function insertCommentRows(
+  rows: Row[],
+  path: string,
+  threads: readonly CommentThread[],
+  composer: ComposerTarget | null,
+): void {
+  if (threads.length === 0 && composer === null) {
+    return;
+  }
+  const anchors = anchorIndexes(rows, path);
+  const visible = new Set(anchors.keys());
+  const { inline, outside } = partitionThreads(threads, visible);
+  const after = new Map<number, Row[]>();
+  const pushAfter = (index: number, row: Row) => {
+    const list = after.get(index) ?? [];
+    list.push(row);
+    after.set(index, list);
+  };
+
+  if (outside.length > 0) {
+    pushAfter(0, { kind: 'thread', threadKey: outsideThreadKey(path) });
+  }
+  for (const thread of inline) {
+    const index = anchors.get(thread.key);
+    if (index !== undefined) {
+      pushAfter(index, { kind: 'thread', threadKey: thread.key });
+    }
+  }
+  if (composer !== null) {
+    const index = anchors.get(threadKey(path, composer.side, composer.line)) ?? 0;
+    pushAfter(index, { kind: 'composer', side: composer.side, line: composer.line, startLine: composer.startLine });
+  }
+
+  // Rebuild once: changing `rows` while walking it would move the anchors still to be visited.
+  const result: Row[] = [];
+  for (const [index, row] of rows.entries()) {
+    result.push(row);
+    const extras = after.get(index);
+    if (extras !== undefined) {
+      result.push(...extras);
+    }
+  }
+  rows.splice(0, rows.length, ...result);
+}
+
+/** Row index of every line that can carry a comment, keyed like a thread. */
+function anchorIndexes(rows: readonly Row[], path: string): Map<string, number> {
+  const indexes = new Map<string, number>();
+  for (const [index, row] of rows.entries()) {
+    if (row.kind === 'line') {
+      addLineAnchor(indexes, path, index, row.line);
+    } else if (row.kind === 'split') {
+      if (row.left) {
+        addAnchor(indexes, path, 'old', index, row.left.oldNo);
+      }
+      if (row.right) {
+        addAnchor(indexes, path, 'new', index, row.right.newNo);
+      }
+    }
+  }
+  return indexes;
+}
+
+/** Keys of the comment anchors currently visible in a file; used to collect all invisible threads. */
+export function visibleThreadKeys(rows: readonly Row[], path: string): Set<string> {
+  return new Set(anchorIndexes(rows, path).keys());
+}
+
+function addLineAnchor(indexes: Map<string, number>, path: string, index: number, line: DiffLine): void {
+  // A context line exists on both sides; a comment on either side belongs after this row.
+  if (line.oldNo !== null) {
+    addAnchor(indexes, path, 'old', index, line.oldNo);
+  }
+  if (line.newNo !== null) {
+    addAnchor(indexes, path, 'new', index, line.newNo);
+  }
+}
+
+function addAnchor(
+  indexes: Map<string, number>,
+  path: string,
+  side: CommentSide,
+  index: number,
+  line: number | null,
+): void {
+  if (line !== null) {
+    indexes.set(threadKey(path, side, line), index);
+  }
 }
 
 function pushHunkRows(rows: Row[], view: FileView, hunks: Hunk[], mode: ViewMode): void {

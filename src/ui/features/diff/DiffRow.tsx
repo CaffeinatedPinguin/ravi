@@ -1,6 +1,10 @@
 /** Renders one row of the diff. Memoised: while scrolling, only rows that enter the viewport render. */
 import { memo } from 'react';
 import type { DiffFile } from '../../../shared/api.ts';
+import type { CommentSide } from '../../../shared/review.ts';
+import { ComposerRow } from '../comments/ComposerRow.tsx';
+import type { ReviewStore } from '../comments/reviewStore.ts';
+import { ThreadRow } from '../comments/Thread.tsx';
 import { Button, IconButton } from '../../components/controls.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import styles from './DiffView.module.css';
@@ -9,34 +13,68 @@ import type { DiffLine } from './patch.ts';
 import type { FileView, Row } from './rows.ts';
 import type { DiffSession, FileTokens } from './session.ts';
 
+type FocusLine = (fileIndex: number, side: CommentSide, line: number) => void;
+
 type DiffRowProps = {
   row: Row;
   fileIndex: number;
   view: FileView;
   tokens: FileTokens | undefined;
   session: DiffSession;
+  store: ReviewStore | null;
   expandStep: number;
   /** Absolute path of the repository, for the file path link. */
   repoPath: string;
+  onFocusLine?: FocusLine;
 };
 
-export const DiffRow = memo(function DiffRow({ row, fileIndex, view, tokens, session, expandStep, repoPath }: DiffRowProps) {
+export const DiffRow = memo(function DiffRow({
+  row,
+  fileIndex,
+  view,
+  tokens,
+  session,
+  store,
+  expandStep,
+  repoPath,
+  onFocusLine,
+}: DiffRowProps) {
   switch (row.kind) {
     case 'file':
       return <FileHeader view={view} fileIndex={fileIndex} session={session} repoPath={repoPath} />;
-    case 'line':
+    case 'line': {
+      const anchor = unifiedAnchor(row.line);
       return (
-        <div className={styles.line} data-type={row.line.type}>
-          <span className={styles.number}>{row.line.oldNo}</span>
-          <span className={styles.number}>{row.line.newNo}</span>
+        <div
+          className={styles.line}
+          data-type={row.line.type}
+          onMouseEnter={() => anchor !== null && onFocusLine?.(fileIndex, anchor.side, anchor.line)}
+        >
+          <NumberCell
+            number={row.line.oldNo}
+            side="old"
+            comment={anchor?.side === 'old' ? anchor.line : null}
+            fileIndex={fileIndex}
+            session={session}
+            onFocusLine={onFocusLine}
+          />
+          <NumberCell
+            number={row.line.newNo}
+            side="new"
+            comment={anchor?.side === 'new' ? anchor.line : null}
+            fileIndex={fileIndex}
+            session={session}
+            onFocusLine={onFocusLine}
+          />
           <Code line={row.line} tokens={lineTokens(tokens, row.line)} />
         </div>
       );
+    }
     case 'split':
       return (
         <div className={styles.split}>
-          <SplitSide line={row.left} side="old" tokens={tokens} />
-          <SplitSide line={row.right} side="new" tokens={tokens} />
+          <SplitSide line={row.left} side="old" tokens={tokens} fileIndex={fileIndex} session={session} onFocusLine={onFocusLine} />
+          <SplitSide line={row.right} side="new" tokens={tokens} fileIndex={fileIndex} session={session} onFocusLine={onFocusLine} />
         </div>
       );
     case 'gap':
@@ -65,8 +103,62 @@ export const DiffRow = memo(function DiffRow({ row, fileIndex, view, tokens, ses
       );
     case 'notice':
       return <Notice row={row} view={view} fileIndex={fileIndex} session={session} />;
+    case 'thread':
+      return store ? <ThreadRow threads={session.threadsOf(row.threadKey)} store={store} /> : null;
+    case 'composer':
+      return store ? (
+        <ComposerRow
+          path={view.file.path}
+          target={{ side: row.side, line: row.line, startLine: row.startLine }}
+          store={store}
+          onClose={() => session.closeComposer(fileIndex)}
+        />
+      ) : null;
   }
 });
+
+/** In unified view one row carries both numbers; adding a line is a new-side comment. */
+function unifiedAnchor(line: DiffLine): { side: CommentSide; line: number } | null {
+  if (line.newNo !== null) {
+    return { side: 'new', line: line.newNo };
+  }
+  if (line.oldNo !== null) {
+    return { side: 'old', line: line.oldNo };
+  }
+  return null;
+}
+
+type NumberCellProps = {
+  number: number | null;
+  side: CommentSide;
+  /** Line that gets a `+` on this cell, or `null` when the other side owns the gutter button. */
+  comment: number | null;
+  fileIndex: number;
+  session: DiffSession;
+  onFocusLine?: FocusLine;
+};
+
+function NumberCell({ number, side, comment, fileIndex, session, onFocusLine }: NumberCellProps) {
+  return (
+    <span className={styles.number}>
+      {number}
+      {comment !== null && (
+        <button
+          type="button"
+          className={styles.commentButton}
+          aria-label={`Comment on line ${comment}`}
+          onFocus={() => onFocusLine?.(fileIndex, side, comment)}
+          onClick={(event) => {
+            event.stopPropagation();
+            session.openComposer(fileIndex, side, comment, event.shiftKey);
+          }}
+        >
+          <Icon name="plus" size={12} />
+        </button>
+      )}
+    </span>
+  );
+}
 
 function lineTokens(tokens: FileTokens | undefined, line: DiffLine): LineTokens | undefined {
   if (!tokens) {
@@ -75,15 +167,28 @@ function lineTokens(tokens: FileTokens | undefined, line: DiffLine): LineTokens 
   return line.newNo !== null ? tokens.new.get(line.newNo) : line.oldNo !== null ? tokens.old.get(line.oldNo) : undefined;
 }
 
-function SplitSide({ line, side, tokens }: { line: DiffLine | null; side: 'old' | 'new'; tokens: FileTokens | undefined }) {
+type SplitSideProps = {
+  line: DiffLine | null;
+  side: CommentSide;
+  tokens: FileTokens | undefined;
+  fileIndex: number;
+  session: DiffSession;
+  onFocusLine?: FocusLine;
+};
+
+function SplitSide({ line, side, tokens, fileIndex, session, onFocusLine }: SplitSideProps) {
   if (!line) {
     return <div className={styles.half} data-type="empty" />;
   }
   const number = side === 'old' ? line.oldNo : line.newNo;
   const sideTokens = number === null ? undefined : (side === 'old' ? tokens?.old : tokens?.new)?.get(number);
   return (
-    <div className={styles.half} data-type={line.type}>
-      <span className={styles.number}>{number}</span>
+    <div
+      className={styles.half}
+      data-type={line.type}
+      onMouseEnter={() => number !== null && onFocusLine?.(fileIndex, side, number)}
+    >
+      <NumberCell number={number} side={side} comment={number} fileIndex={fileIndex} session={session} onFocusLine={onFocusLine} />
       <Code line={line} tokens={sideTokens} />
     </div>
   );
@@ -124,6 +229,7 @@ export function FileHeader({ view, fileIndex, session, repoPath }: FileHeaderPro
   const { file } = view;
   const absolutePath = `${repoPath}/${file.path}`;
   const status = STATUS_LABEL[file.status];
+  const count = session.commentCount(file.path);
   const canExpand = view.load.status === 'loaded' && !view.collapsed && (file.status === 'modified' || file.status === 'renamed');
   return (
     <div className={`${styles.pinnedWidth} ${styles.fileHeader}`}>
@@ -145,6 +251,12 @@ export function FileHeader({ view, fileIndex, session, repoPath }: FileHeaderPro
       {status !== null && (
         <span className={styles.badge} data-status={file.status}>
           {status}
+        </span>
+      )}
+      {count > 0 && (
+        <span className={styles.commentCount} title={`${count} ${count === 1 ? 'comment' : 'comments'}`} aria-label={`${count} comments`}>
+          <Icon name="comment" size={12} />
+          {count}
         </span>
       )}
       <span className={styles.counts}>

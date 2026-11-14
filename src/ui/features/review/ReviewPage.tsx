@@ -1,12 +1,15 @@
 /** The review screen for one repository: top bar, review toolbar, file tree and the diff. */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { DiffSummarySchema, RepoInfoSchema, RepoListSchema } from '../../../shared/api.ts';
 import type { DiffOptions, DiffTarget } from '../../../shared/api.ts';
+import type { ReviewTarget } from '../../../shared/review.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
+import { ToastHost } from '../../components/Toast.tsx';
+import { ReviewStore } from '../comments/reviewStore.ts';
 import { DiffView } from '../diff/DiffView.tsx';
 import type { DiffViewHandle } from '../diff/DiffView.tsx';
 import { FileTree } from '../diff/FileTree.tsx';
@@ -17,6 +20,9 @@ import { TargetPicker } from './TargetPicker.tsx';
 import { decodeTarget, encodeTarget, showsWorkingTree } from './target.ts';
 import { TreeResizer } from './TreeResizer.tsx';
 import { formatUpdatedAgo, useAutoRefresh } from './useAutoRefresh.ts';
+
+const NO_SUBSCRIBE = () => () => undefined;
+const ZERO = () => 0;
 
 type ReviewPageProps = { repoId: string; targetParam: string | null };
 
@@ -39,6 +45,45 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the summary identifies repository and options.
   const session = useMemo(() => (summary.data ? new DiffSession(repoId, options, summary.data, settings.viewMode) : null), [summary.data]);
   useEffect(() => session?.setMode(settings.viewMode), [session, settings.viewMode]);
+
+  // One store per review target. The server route may not exist yet in this worktree; tests mock it.
+  const repoPath = repo?.path;
+  const reviewTarget = useMemo<ReviewTarget | null>(
+    () => (repoPath === undefined ? null : { kind: 'local', repoPath, target: encodeTarget(target) }),
+    [repoPath, target],
+  );
+  const store = useMemo(() => (reviewTarget ? new ReviewStore(repoId, reviewTarget) : null), [repoId, reviewTarget]);
+  useEffect(() => {
+    if (store) {
+      void store.load();
+    }
+  }, [store]);
+  const storeVersion = useSyncExternalStore(store?.subscribe ?? NO_SUBSCRIBE, store?.getVersion ?? ZERO);
+  useEffect(() => {
+    if (session && store) {
+      // `storeVersion` is the signal that the document changed; the document itself is mutable state.
+      void storeVersion;
+      session.setComments(store.document.comments);
+    }
+  }, [session, store, storeVersion]);
+  // The store caches per-file counts until the document itself changes, so the tree badge is
+  // current in the same render as the mutation without walking every comment on scroll.
+  const commentCounts = store?.commentCounts();
+  useEffect(() => {
+    if (!store) {
+      return;
+    }
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!store.hasUnsaved) {
+        return;
+      }
+      store.flush();
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [store]);
 
   const diffView = useRef<DiffViewHandle>(null);
   const [activeFile, setActiveFile] = useState(0);
@@ -144,6 +189,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         <span className={styles.updated} aria-live="polite">
           {updatedAt !== null && formatUpdatedAgo(now, updatedAt)}
         </span>
+        {store && <SaveStatus status={store.saveStatus} onRetry={() => void store.retry()} />}
         <IconButton
           icon="refresh"
           label="Reload changes (r)"
@@ -169,7 +215,12 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         )}
         {session && fileCount > 0 && (
           <>
-            <FileTree files={session.files} activeFile={activeFile} onSelect={goToFile} />
+            <FileTree
+              files={session.files}
+              activeFile={activeFile}
+              onSelect={goToFile}
+              commentCount={(path) => commentCounts?.get(path) ?? 0}
+            />
             <TreeResizer
               width={treeWidth}
               onChange={setPreviewWidth}
@@ -185,11 +236,28 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
               mode={settings.viewMode}
               expandStep={settings.expandStep}
               repoPath={repo?.path ?? ''}
+              store={store}
               onActiveFileChange={setActiveFile}
             />
           </>
         )}
       </div>
+      <ToastHost />
     </div>
+  );
+}
+
+function SaveStatus({ status, onRetry }: { status: 'saved' | 'saving' | 'error'; onRetry: () => void }) {
+  if (status === 'error') {
+    return (
+      <button type="button" className={styles.saveError} onClick={onRetry}>
+        Save failed — retry
+      </button>
+    );
+  }
+  return (
+    <span className={styles.saveStatus} data-status={status} aria-live="polite">
+      {status === 'saving' ? 'Saving…' : 'Saved'}
+    </span>
   );
 }

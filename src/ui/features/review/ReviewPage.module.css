@@ -155,6 +155,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+.saveStatus {
+  color: var(--text-faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.saveStatus[data-status='saving'] {
+  color: var(--text-muted);
+}
+
+.saveError {
+  padding: 2px 8px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--danger);
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .refreshing svg {
   animation: spin 0.9s linear infinite;
 }
