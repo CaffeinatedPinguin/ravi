@@ -3,7 +3,7 @@ import type { DraftOperation, PullRequest, RepoRef } from '../../shared/forge.ts
 import { describeForgeContract } from './contract.ts';
 import type { Forge, ForgeHost } from './forge.ts';
 import { createGitLabForge } from './gitlab.ts';
-import type { GitLabDraft, GitLabForgeOptions } from './gitlab.ts';
+import type { GitLabForgeOptions } from './gitlab.ts';
 import type { FetchLike } from './http.ts';
 import { createForgeHttp } from './http.ts';
 import type { FakeCall, FakeResponse, FakeRoute } from './testing.ts';
@@ -346,7 +346,7 @@ describe('GitLab submit', () => {
       readAsset: () => Promise.resolve({ data: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), type: 'image/png' }),
     });
 
-    const drafts: GitLabDraft[] = [
+    const drafts: DraftOperation[] = [
       { op: 'comment', draftId: 'c1', path: 'src/a.ts', side: 'new', line: 5, startLine: null, body: 'Added note' },
       {
         op: 'comment',
@@ -355,8 +355,9 @@ describe('GitLab submit', () => {
         side: 'new',
         line: 9,
         startLine: null,
+        oldLine: 9,
+        newLine: 9,
         body: 'Context note',
-        lineKind: 'unchanged',
       },
       { op: 'comment', draftId: 'c3', path: 'src/a.ts', side: 'new', line: 12, startLine: 10, body: 'Range note' },
       {
@@ -425,6 +426,95 @@ describe('GitLab submit', () => {
 
     const origin = new URL(API).origin;
     expect(inner.calls.every((call) => new URL(call.url).origin === origin)).toBe(true);
+  });
+
+  it('builds positions from explicit oldLine/newLine pairs and falls back to side/line', async () => {
+    const draftNoteBodies: DraftNoteBody[] = [];
+    const routes: Record<string, FakeRoute> = {
+      [`GET ${MR_URL}`]: { json: mergeRequest() },
+      [`POST ${DRAFT_NOTES_URL}`]: (call: FakeCall): FakeResponse => {
+        draftNoteBodies.push(parseJson(call.body) as DraftNoteBody);
+        return { status: 201, json: { id: draftNoteBodies.length } };
+      },
+      [`POST ${DRAFT_NOTES_URL}/bulk_publish`]: { json: {} },
+    };
+    const { forge } = makeForge(routes);
+    const drafts: DraftOperation[] = [
+      {
+        op: 'comment',
+        draftId: 'both',
+        path: 'src/a.ts',
+        side: 'new',
+        line: 12,
+        startLine: null,
+        oldLine: 10,
+        newLine: 12,
+        body: 'Both lines',
+      },
+      {
+        op: 'comment',
+        draftId: 'new-only',
+        path: 'src/a.ts',
+        side: 'new',
+        line: 14,
+        startLine: null,
+        newLine: 14,
+        body: 'New only',
+      },
+      {
+        op: 'comment',
+        draftId: 'fallback-old',
+        path: 'src/b.ts',
+        side: 'old',
+        line: 3,
+        startLine: null,
+        body: 'Fallback old',
+      },
+      {
+        op: 'comment',
+        draftId: 'fallback-new',
+        path: 'src/a.ts',
+        side: 'new',
+        line: 5,
+        startLine: null,
+        body: 'Fallback new',
+      },
+      {
+        op: 'comment',
+        draftId: 'range',
+        path: 'src/a.ts',
+        side: 'new',
+        line: 12,
+        startLine: 10,
+        startOldLine: 10,
+        startNewLine: 10,
+        oldLine: 12,
+        newLine: 12,
+        body: 'Explicit range',
+      },
+    ];
+
+    const results = await forge.submit(REPO, MR, PR, drafts, null, null);
+
+    const byNote = (text: string): DraftNoteBody | undefined =>
+      draftNoteBodies.find((body) => body.note === text);
+
+    expect(byNote('Both lines')?.position).toMatchObject({ old_line: 10, new_line: 12 });
+    expect(byNote('New only')?.position).toMatchObject({ new_line: 14 });
+    expect(byNote('New only')?.position).not.toHaveProperty('old_line');
+    expect(byNote('Fallback old')?.position).toMatchObject({ old_line: 3 });
+    expect(byNote('Fallback old')?.position).not.toHaveProperty('new_line');
+    expect(byNote('Fallback new')?.position).toMatchObject({ new_line: 5 });
+    expect(byNote('Fallback new')?.position).not.toHaveProperty('old_line');
+    expect(byNote('Explicit range')?.position).toMatchObject({
+      old_line: 12,
+      new_line: 12,
+      line_range: {
+        start: { old_line: 10, new_line: 10 },
+        end: { old_line: 12, new_line: 12 },
+      },
+    });
+    expect(results.every((result) => result.ok)).toBe(true);
   });
 
   it('fails the draft results and deletes created drafts when bulk_publish fails', async () => {

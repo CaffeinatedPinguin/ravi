@@ -6,9 +6,9 @@
  * - `submit` writes draft notes and publishes them with one `bulk_publish`, so the author gets one
  *   notification instead of one per comment. "Request changes" is a `reviewer_state`, not a review
  *   event, and approving is a separate endpoint that needs the current head SHA.
- * - A draft note needs a diff position whose old/new line shape depends on the kind of line. The
- *   shared `DraftOperation` only carries `side` + one line number, so a new-side comment is treated
- *   as an added line unless the caller (the outbox, which knows the diff row) sets `lineKind`.
+ * - A draft note needs a diff position whose old/new line shape depends on the kind of line. A
+ *   context line needs both numbers even when they differ; the outbox therefore fills `oldLine`
+ *   and `newLine` from the diff row, and only falls back to `side` + `line` when both are absent.
  * - `ForgeHttp` has no multipart helper and does not expose its auth headers, so uploads are a
  *   small raw-fetch helper here; the registry wires the auth callback through factory options.
  */
@@ -39,12 +39,6 @@ export type GitLabForgeOptions = {
   /** Fetch used for multipart uploads; overridable so tests never touch the network. */
   fetchImpl?: FetchLike;
 };
-
-/**
- * A draft plus the diff-row kind the outbox knows but the shared model does not carry. Without it a
- * new-side line is indistinguishable from a context line, so we fall back to the added-line shape.
- */
-export type GitLabDraft = DraftOperation & { lineKind?: 'added' | 'removed' | 'unchanged' };
 
 const AuthorSchema = z.object({ username: z.string() });
 
@@ -115,7 +109,7 @@ const UploadSchema = z.object({ markdown: z.string() });
 const DraftNoteSchema = z.object({ id: z.number().int() });
 
 type DiffRefs = { baseSha: string; headSha: string; startSha: string };
-type Anchor = 'added' | 'removed' | 'unchanged';
+type LinePair = { old_line?: number; new_line?: number };
 type UploadedAsset = { markdown: string } | { error: string };
 
 const ASSET_LINK = /!\[([^\]]*)\]\(asset:([^)\s]+)\)/g;
@@ -259,7 +253,6 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
     draft: Extract<DraftOperation, { op: 'comment' }>,
     refs: DiffRefs,
   ): Record<string, unknown> {
-    const anchor = draftAnchor(draft);
     const base = {
       position_type: 'text',
       base_sha: refs.baseSha,
@@ -268,20 +261,25 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
       old_path: draft.path,
       new_path: draft.path,
     };
+    const end = linePair(draft.oldLine, draft.newLine, { side: draft.side, line: draft.line });
 
     // GitLab accepts line_range for multi-line notes; a range outside a hunk would be invalid, but
     // the outbox only produces ranges from visible diff rows.
     if (draft.startLine !== null && draft.startLine < draft.line) {
+      const start = linePair(draft.startOldLine, draft.startNewLine, {
+        side: draft.side,
+        line: draft.startLine,
+      });
       return {
         ...base,
-        ...lineFields(anchor, draft.line),
+        ...end,
         line_range: {
-          start: { ...lineType(anchor), ...lineFields(anchor, draft.startLine) },
-          end: { ...lineType(anchor), ...lineFields(anchor, draft.line) },
+          start: { ...lineType(start), ...start },
+          end: { ...lineType(end), ...end },
         },
       };
     }
-    return { ...base, ...lineFields(anchor, draft.line) };
+    return { ...base, ...end };
   }
 
   function findDiscussion(threads: Thread[], commentId: string): string {
@@ -584,30 +582,35 @@ function toThread(id: string, root: Note, notes: Note[], headSha: string, me: st
   };
 }
 
-function draftAnchor(draft: Extract<DraftOperation, { op: 'comment' }>): Anchor {
-  const explicit = (draft as GitLabDraft).lineKind;
-  if (explicit !== undefined) {
-    return explicit;
+/**
+ * The explicit pair from the diff row wins: both set = unchanged line, only one set = added or
+ * removed. Without either, `side` says which line number the draft carries.
+ */
+function linePair(
+  oldLine: number | null | undefined,
+  newLine: number | null | undefined,
+  fallback: { side: CommentSide; line: number },
+): LinePair {
+  if (isLine(oldLine) && isLine(newLine)) {
+    return { old_line: oldLine, new_line: newLine };
   }
-  return draft.side === 'old' ? 'removed' : 'added';
+  if (isLine(newLine)) {
+    return { new_line: newLine };
+  }
+  if (isLine(oldLine)) {
+    return { old_line: oldLine };
+  }
+  return fallback.side === 'old' ? { old_line: fallback.line } : { new_line: fallback.line };
 }
 
-function lineFields(anchor: Anchor, line: number): { old_line?: number; new_line?: number } {
-  if (anchor === 'removed') {
-    return { old_line: line };
-  }
-  // An unchanged line exists on both sides; GitLab requires both numbers even when they differ.
-  if (anchor === 'unchanged') {
-    return { old_line: line, new_line: line };
-  }
-  return { new_line: line };
-}
-
-function lineType(anchor: Anchor): { type?: 'new' | 'old' } {
-  if (anchor === 'added') {
+/** Range points carry a `type` only when they name one side; unchanged points name both. */
+function lineType(pair: LinePair): { type?: 'new' | 'old' } {
+  const hasOld = pair.old_line !== undefined;
+  const hasNew = pair.new_line !== undefined;
+  if (hasNew && !hasOld) {
     return { type: 'new' };
   }
-  if (anchor === 'removed') {
+  if (hasOld && !hasNew) {
     return { type: 'old' };
   }
   return {};
