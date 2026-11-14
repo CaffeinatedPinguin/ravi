@@ -23,6 +23,7 @@ const PATHS = {
   moon: 'M13.5 9.5A6 6 0 0 1 6.5 2.5a6 6 0 1 0 7 7z',
   collapse: 'M3 6l5-4 5 4M3 10l5 4 5-4',
   comment: 'M2.5 3.5h11v7h-6l-3 3v-3h-2z',
+  star: 'M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 12.2 4.2 13.6l.7-4.3-3.1-3 4.3-.6z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

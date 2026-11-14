@@ -1,0 +1,23 @@
+.nav {
+  display: flex;
+  gap: 2px;
+}
+
+.tab {
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.tab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.tab[aria-current='page'] {
+  background: var(--bg-inset);
+  color: var(--text);
+  font-weight: 600;
+}

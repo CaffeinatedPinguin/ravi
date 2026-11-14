@@ -1,7 +1,9 @@
-/** Inline threads under a commented line: root comment, replies and their actions. */
+/** Inline threads under a commented line: local drafts, forge threads and their actions. */
 import { useState } from 'react';
+import type { Thread } from '../../../shared/forge.ts';
 import type { ReviewComment } from '../../../shared/review.ts';
 import { showToast } from '../../components/Toast.tsx';
+import { LineLink } from '../pulls/LinkMode.tsx';
 import { Composer } from './Composer.tsx';
 import styles from './Comments.module.css';
 import { MarkdownView } from './MarkdownView.tsx';
@@ -21,7 +23,8 @@ export function ThreadRow({ threads, store, reviewLevel = false }: ThreadRowProp
       {outside && <p className={styles.outside}>Comments outside the shown lines</p>}
       {threads.map((thread) => (
         <section
-          key={thread.key}
+          // Several outside threads share one key; the forge id keeps React's list stable.
+          key={thread.remote?.id ?? thread.key}
           className={reviewLevel ? `${styles.thread} ${styles.noteThread}` : styles.thread}
           aria-label={
             reviewLevel
@@ -34,12 +37,43 @@ export function ThreadRow({ threads, store, reviewLevel = false }: ThreadRowProp
               Lines {thread.startLine}–{thread.line}
             </p>
           )}
+          {thread.remote !== undefined && <RemoteThread thread={thread.remote} />}
           {thread.comments.map((comment) => (
             <CommentView key={comment.id} comment={comment} store={store} reply={comment.parentId !== null} />
           ))}
         </section>
       ))}
     </div>
+  );
+}
+
+/** A forge thread is read-only: no edit, delete or reply controls (writing is a later task). */
+export function RemoteThread({ thread, className }: { thread: Thread; className?: string }) {
+  return (
+    <article className={[styles.remoteThread, className].filter(Boolean).join(' ')} aria-label="Remote thread">
+      <header className={styles.commentHeader}>
+        <span className={styles.author}>{thread.comments[0]?.author ?? 'Forge'}</span>
+        {thread.comments[0] !== undefined && (
+          <time className={styles.time} dateTime={thread.comments[0].createdAt}>
+            {relativeTime(thread.comments[0].createdAt)}
+          </time>
+        )}
+        {thread.outdated && <span className={styles.badge}>Outdated</span>}
+        {thread.resolved && <span className={styles.badge}>Resolved</span>}
+      </header>
+      {thread.comments.map((comment) => (
+        <div key={comment.id} className={styles.remoteComment}>
+          <header className={styles.commentHeader}>
+            <span className={styles.author}>{comment.author}</span>
+            <time className={styles.time} dateTime={comment.createdAt}>
+              {relativeTime(comment.createdAt)}
+            </time>
+            {thread.path !== null && <LineLink path={thread.path} side={thread.side} line={thread.line} />}
+          </header>
+          <MarkdownView body={comment.body} />
+        </div>
+      ))}
+    </article>
   );
 }
 
@@ -61,6 +95,7 @@ function CommentView({ comment, store, reply }: { comment: ReviewComment; store:
         </time>
         {comment.state === 'draft' && <span className={styles.badge}>Draft</span>}
         {comment.outdated && <span className={styles.badge}>Outdated</span>}
+        {comment.path !== null && <LineLink path={comment.path} side={comment.side} line={comment.line} />}
       </header>
       {editing ? (
         <Composer

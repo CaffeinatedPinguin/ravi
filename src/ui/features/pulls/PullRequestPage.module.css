@@ -1,0 +1,148 @@
+.repoName {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.number {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.state {
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.state[data-state='open'] {
+  color: var(--add-text);
+}
+
+.state[data-state='merged'] {
+  color: var(--accent);
+}
+
+.byline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.refs {
+  font: 12px var(--font-mono);
+}
+
+.sha {
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--bg-inset);
+  color: var(--text-faint);
+  font: 11px var(--font-mono);
+}
+
+.warnings {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-subtle);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.body > * {
+  min-height: 0;
+}
+
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.conversation h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.description {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+
+.threads {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: var(--text-muted);
+}
+
+.error {
+  color: var(--danger);
+}

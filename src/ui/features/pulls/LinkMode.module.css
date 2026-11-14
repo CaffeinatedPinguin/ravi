@@ -1,0 +1,20 @@
+/* A calm inline link chip: paths are monospace, the colour only appears on hover. */
+.link {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+  font: 11px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.link:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}

@@ -1,4 +1,4 @@
-/** Start screen: connected folders and the form to connect more. */
+/** Start screen: review later, local folders, remote repositories and forge accounts. */
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { DirListSchema, RepoListSchema, RepoSchema, ScanResultSchema } from '../../../shared/api.ts';
@@ -7,6 +7,9 @@ import { navigate } from '../../app/router.ts';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
 import styles from './HomePage.module.css';
+import { AccountsSection } from './AccountsSection.tsx';
+import { RemoteReposSection } from './RemoteReposSection.tsx';
+import { ReviewLaterSection } from './ReviewLaterSection.tsx';
 
 export function HomePage({ notice }: { notice: string | null }) {
   const repos = useAsync('repos', (signal) => apiGet('/api/repos', RepoListSchema, signal));
@@ -47,9 +50,13 @@ export function HomePage({ notice }: { notice: string | null }) {
       repos.reload();
     });
 
+  const localRepos = repos.data?.filter((repo) => repo.kind !== 'remote') ?? [];
+
   return (
     <main className={styles.page}>
       <h1 className={styles.title}>revu</h1>
+
+      <ReviewLaterSection repos={repos.data ?? []} />
 
       <section aria-labelledby="connect-heading">
         <h2 id="connect-heading">Connect a local folder</h2>
@@ -104,9 +111,9 @@ export function HomePage({ notice }: { notice: string | null }) {
       <section aria-labelledby="repos-heading">
         <h2 id="repos-heading">Local folders</h2>
         {repos.error !== null && <p className={styles.error}>{repos.error}</p>}
-        {repos.data?.length === 0 && <p className={styles.empty}>Nothing connected yet. Add a folder above, or run `revu` inside a repository.</p>}
+        {localRepos.length === 0 && <p className={styles.empty}>Nothing connected yet. Add a folder above, or run `revu` inside a repository.</p>}
         <ul className={styles.list}>
-          {repos.data?.map((repo) => (
+          {localRepos.map((repo) => (
             <li key={repo.id} className={styles.item}>
               <a
                 className={styles.repoLink}
@@ -124,6 +131,10 @@ export function HomePage({ notice }: { notice: string | null }) {
           ))}
         </ul>
       </section>
+
+      <RemoteReposSection repos={repos.data ?? []} onReposChanged={repos.reload} />
+
+      <AccountsSection />
     </main>
   );
 }

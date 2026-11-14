@@ -8,10 +8,12 @@
  */
 import { BlobSchema, PatchesSchema } from '../../../shared/api.ts';
 import type { DiffFile, DiffOptions, DiffSummary } from '../../../shared/api.ts';
+import type { Thread } from '../../../shared/forge.ts';
 import type { ReviewComment } from '../../../shared/review.ts';
 import { apiSend } from '../../app/api.ts';
 import type { CommentThread } from '../comments/threads.ts';
 import { groupThreads, isOutsideThreadKey, pathFromOutsideThreadKey } from '../comments/threads.ts';
+import { remoteThreadsForPath } from '../pulls/remoteThreads.ts';
 import { highlightLines, languageForPath } from './highlight.ts';
 import type { LineTokens } from './highlight.ts';
 import { parsePatch } from './patch.ts';
@@ -44,6 +46,8 @@ export class DiffSession {
   /** Diff files by path; comments come with a path, not a file index. */
   private readonly fileIndexesByPath = new Map<string, number[]>();
   private commentsByPath = new Map<string, readonly ReviewComment[]>();
+  private comments: readonly ReviewComment[] = [];
+  private remoteThreads: readonly Thread[] = [];
   private threadsByPath = new Map<string, CommentThread[]>();
   private threadsByKey = new Map<string, CommentThread[]>();
   private commentCounts = new Map<string, number>();
@@ -210,22 +214,46 @@ export class DiffSession {
     }
     this.commentsByPath = byPath;
     this.commentCounts = counts;
-    this.threadsByPath = new Map();
-    this.threadsByKey = new Map();
-    for (const thread of groupThreads(comments)) {
-      const forPath = this.threadsByPath.get(thread.path) ?? [];
-      forPath.push(thread);
-      this.threadsByPath.set(thread.path, forPath);
-      const forKey = this.threadsByKey.get(thread.key) ?? [];
-      forKey.push(thread);
-      this.threadsByKey.set(thread.key, forKey);
-    }
+    this.comments = comments;
+    this.rebuildThreadIndexes();
     for (const path of changed) {
       for (const index of this.fileIndexesByPath.get(path) ?? []) {
         this.rowCache[index] = null;
       }
     }
     this.changed();
+  }
+
+  /** Adds the forge's read-only threads to the same row anchors the local comments use. */
+  setRemoteThreads(threads: readonly Thread[]): void {
+    this.remoteThreads = threads;
+    this.rebuildThreadIndexes();
+    this.rowCache.fill(null);
+    this.changed();
+  }
+
+  private rebuildThreadIndexes(): void {
+    this.threadsByPath = new Map();
+    this.threadsByKey = new Map();
+    const index = (thread: CommentThread): void => {
+      const forPath = this.threadsByPath.get(thread.path) ?? [];
+      forPath.push(thread);
+      this.threadsByPath.set(thread.path, forPath);
+      const forKey = this.threadsByKey.get(thread.key) ?? [];
+      forKey.push(thread);
+      this.threadsByKey.set(thread.key, forKey);
+    };
+    for (const thread of groupThreads(this.comments)) {
+      index(thread);
+    }
+    for (const remote of this.remoteThreads) {
+      if (remote.path === null) {
+        continue;
+      }
+      for (const thread of remoteThreadsForPath([remote], remote.path)) {
+        index(thread);
+      }
+    }
   }
 
   /** Asks for the patches of files that are about to be visible; requests are batched. */

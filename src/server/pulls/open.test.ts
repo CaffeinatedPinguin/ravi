@@ -6,7 +6,10 @@ import { pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Repo } from '../../shared/api.ts';
 import type { PullRequest } from '../../shared/forge.ts';
+import type { ReviewComment, ReviewTarget } from '../../shared/review.ts';
+import { fileWebUrl } from '../forges/urls.ts';
 import { resolvePaths } from '../paths.ts';
+import { readReview, writeReview } from '../review/store.ts';
 import { writeJsonFile } from '../store/json-file.ts';
 import { openPullRequest } from './open.ts';
 import { fakeForge } from './testing.ts';
@@ -127,6 +130,74 @@ describe('openPullRequest', () => {
       number: NUMBER,
       forge: 'github',
     });
+  });
+
+  it.each([
+    ['GitHub', 'https://github.com', '/blob/'],
+    ['GitLab', 'https://gitlab.com', '/-/blob/'],
+  ])('returns %s file URL templates for both sides', async (_name, webRoot, marker) => {
+    const { paths } = await makeRepo();
+    const result = await openPullRequest(paths, REPO_ID, NUMBER, {
+      forgeFor: () =>
+        Promise.resolve(
+          fakeForge({
+            getPullRequest: () => Promise.resolve(pullRequest()),
+            webUrl: (repo, sha, path, line) => fileWebUrl(webRoot, repo.project, sha, path, line, marker),
+          }),
+        ),
+    });
+
+    // The two placeholders are the only thing the UI is allowed to know about the forge URL shape.
+    expect(result.fileUrlTemplate).toBe(`${webRoot}/acme/api${marker}${headSha}/{path}#L{line}`);
+    expect(result.oldFileUrlTemplate).toBe(`${webRoot}/acme/api${marker}${baseSha}/{path}#L{line}`);
+  });
+
+  it('stores the opened head and base in the review document without touching its comments', async () => {
+    const { paths } = await makeRepo();
+    const target: ReviewTarget = {
+      kind: 'pullRequest',
+      host: 'github.com',
+      project: 'acme/api',
+      number: NUMBER,
+      forge: 'github',
+    };
+    const comment: ReviewComment = {
+      id: 'l-existing',
+      parentId: null,
+      path: 'a.txt',
+      side: 'new',
+      line: 1,
+      startLine: null,
+      body: 'Keep me',
+      author: null,
+      state: 'draft',
+      createdAt: '2026-11-14T10:00:00.000Z',
+      updatedAt: '2026-11-14T10:00:00.000Z',
+      codeContext: null,
+      outdated: false,
+    };
+    await writeReview(paths, REPO_ID, {
+      version: 1,
+      target,
+      baseSha: null,
+      headSha: null,
+      action: null,
+      summary: 'Existing summary',
+      comments: [comment],
+    });
+
+    await openPullRequest(paths, REPO_ID, NUMBER, {
+      forgeFor: () =>
+        Promise.resolve(
+          fakeForge({ getPullRequest: () => Promise.resolve(pullRequest()) }),
+        ),
+    });
+
+    const stored = await readReview(paths, REPO_ID, target);
+    expect(stored.baseSha).toBe(baseSha);
+    expect(stored.headSha).toBe(headSha);
+    expect(stored.summary).toBe('Existing summary');
+    expect(stored.comments).toEqual([comment]);
   });
 
   it('warns and keeps the fetched head when the forge reports an older commit', async () => {
