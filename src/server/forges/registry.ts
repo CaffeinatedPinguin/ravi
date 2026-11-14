@@ -9,6 +9,7 @@ import type { ForgeKind, ForgeStatus, RepoRef } from '../../shared/forge.ts';
 import { HttpError } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
 import { readAsset } from '../review/assets.ts';
+import { e2eForgeOverride } from './e2e-override.ts';
 import { readForgeTokens } from './env.ts';
 import type { Forge, ForgeHost } from './forge.ts';
 import { createGitHubForge } from './github.ts';
@@ -43,7 +44,7 @@ function gitlabAuth(token: string, headers: Headers): void {
   headers.set('private-token', token);
 }
 
-export const HOSTS: ForgeHost[] = [
+const BASE_HOSTS: ForgeHost[] = [
   {
     host: 'github.com',
     kind: 'github',
@@ -61,6 +62,19 @@ export const HOSTS: ForgeHost[] = [
     auth: gitlabAuth,
   },
 ];
+
+/** The E2E harness points the GitHub strategy at its fake loopback API; nothing else changes. */
+function hostsForThisProcess(): ForgeHost[] {
+  const override = e2eForgeOverride();
+  if (override === null) {
+    return BASE_HOSTS;
+  }
+  return BASE_HOSTS.map((host) =>
+    host.kind === 'github' ? { ...host, apiUrl: override.apiUrl, webUrl: override.webUrl } : host,
+  );
+}
+
+export const HOSTS: ForgeHost[] = hostsForThisProcess();
 
 export const FACTORIES: Record<ForgeKind, ForgeFactory> = {
   // GitHub's factory does not need uploads yet; the registry adapts it to the shared context.
