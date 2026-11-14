@@ -50,8 +50,10 @@ omitted when absent. Commits are shortened to seven characters.
 - Every body line starts with `> ` (an empty body line is `>`), so a body may contain headings,
   fences and quotes of its own. One level of quoting is removed on import.
 - `### reply` attaches to the nearest `##` comment above; it has no location of its own.
-- Drafts and published comments are both exported. Only `id`/`author` tell them apart: a draft has
-  neither, a published comment carries its forge id and author.
+- Drafts and published comments are both exported. `id` identifies an existing comment: a draft
+  keeps its opaque local `l-…` id and a published one carries the forge id, so an edited export
+  updates the same comment on import instead of adding a duplicate. A section without an `id` is a
+  new comment. `author` is written when known.
 - Import is tolerant: CRLF, trailing spaces, missing blank lines, a missing `>` on an empty body
   line, any `#` count in the title, and unknown header lines are accepted. A section that cannot be
   read is skipped with an error entry that carries its line number. Input over 2 MiB is rejected and

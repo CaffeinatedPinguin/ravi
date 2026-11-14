@@ -256,13 +256,12 @@ function location(comment: ReviewComment): string {
 }
 
 /**
- * `id` and `author` are also what tells published comments from local drafts, so a draft is written
- * without them: its `l-...` id means nothing outside this review and would only confuse an agent.
+ * Every comment that has an id writes it, drafts included. The main workflow is copy → edit in an
+ * AI/human → import back: without the id an edited draft would return as a new comment and the
+ * review would fill with duplicates. Ids are opaque to the reader, so showing a local `l-...` is
+ * harmless; `author` is only written when it is known.
  */
 function suffix(comment: ReviewComment): string {
-  if (comment.state !== 'published') {
-    return '';
-  }
   let text = '';
   if (comment.id !== '') {
     text += ` · id ${comment.id}`;

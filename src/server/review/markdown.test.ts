@@ -117,7 +117,7 @@ describe('toMarkdown / fromMarkdown', () => {
     expect(local).toContain('# Code review: local C:/repo (uncommitted)');
   });
 
-  it('exports a local draft without its local id and author', () => {
+  it('exports a local draft with its id so a re-import can update it instead of duplicating it', () => {
     const doc: ReviewDocument = {
       version: 1,
       target: { kind: 'local', repoPath: 'C:/repo', target: 'staged' },
@@ -129,9 +129,51 @@ describe('toMarkdown / fromMarkdown', () => {
     };
 
     const markdown = toMarkdown(doc);
-    expect(markdown).toContain('## src/a.ts:5 (new)\n> hello');
-    expect(markdown).not.toContain('l-abc123');
-    expect(fromMarkdown(markdown).comments[0]?.body).toBe('hello');
+    expect(markdown).toContain('## src/a.ts:5 (new) · id l-abc123\n> hello');
+    const result = fromMarkdown(markdown);
+    expect(result.comments[0]?.id).toBe('l-abc123');
+    expect(result.comments[0]?.body).toBe('hello');
+  });
+
+  it('round-trips two drafts, a root and its reply, with the same ids', () => {
+    const doc: ReviewDocument = {
+      version: 1,
+      target: { kind: 'local', repoPath: 'C:/repo', target: 'uncommitted' },
+      baseSha: null,
+      headSha: null,
+      action: null,
+      summary: null,
+      comments: [
+        comment({ id: 'l-root', path: 'src/a.ts', line: 3, body: 'draft root', state: 'draft' }),
+        comment({ id: 'l-reply', parentId: 'l-root', path: 'src/a.ts', line: 3, body: 'draft reply', state: 'draft' }),
+      ],
+    };
+
+    const result = fromMarkdown(toMarkdown(doc));
+    expect(result.errors).toEqual([]);
+    expect(result.comments.map(pick)).toEqual(doc.comments.map(pick));
+  });
+
+  it('re-imports an edited export: an edited draft keeps its id and an appended section is new', () => {
+    const doc: ReviewDocument = {
+      version: 1,
+      target: { kind: 'local', repoPath: 'C:/repo', target: 'uncommitted' },
+      baseSha: null,
+      headSha: null,
+      action: null,
+      summary: null,
+      comments: [comment({ id: 'l-edit', path: 'src/a.ts', line: 5, body: 'old text', state: 'draft' })],
+    };
+
+    const edited = toMarkdown(doc)
+      .replace('> old text', '> new text')
+      .concat('\n## src/b.ts:7 (new)\n> brand new\n');
+    const result = fromMarkdown(edited);
+
+    expect(result.errors).toEqual([]);
+    expect(result.comments).toHaveLength(2);
+    expect(result.comments[0]).toMatchObject({ id: 'l-edit', path: 'src/a.ts', line: 5, body: 'new text' });
+    expect(result.comments[1]).toMatchObject({ id: null, path: 'src/b.ts', line: 7, body: 'brand new' });
   });
 
   it('uses a fence longer than any run of backticks in the code context', () => {
