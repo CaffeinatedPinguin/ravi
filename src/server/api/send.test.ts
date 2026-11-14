@@ -235,4 +235,63 @@ describe('sendReview', () => {
     expect(response.document.summary).toBeNull();
     expect(response.document.action).toBeNull();
   });
+
+  it('reports a successful approve-only send and leaves the document untouched', async () => {
+    const { paths } = await makeRepo();
+    const document = reviewDocument({
+      action: null,
+      summary: null,
+      comments: [comment({ id: 'p1', path: 'a.txt', side: 'new', line: 2, body: 'published', state: 'published' })],
+    });
+    await writeReview(paths, REPO_ID, document);
+
+    const forge = fakeForge({
+      getPullRequest: () => Promise.resolve(pullRequest()),
+      submit: () => Promise.resolve([{ draftId: '__review__', ok: true, remoteId: '900' }]),
+    });
+    const response = await sendReview(
+      paths,
+      REPO_ID,
+      NUMBER,
+      { action: 'approve', summary: null, force: false },
+      { forgeFor: () => Promise.resolve(forge) },
+    );
+
+    expect(response.results).toEqual([]);
+    expect(response.approval).toEqual({ action: 'approve', ok: true });
+    expect(response.document).toEqual(document);
+    expect(existsSync(join(paths.data, 'send-log.jsonl'))).toBe(true);
+  });
+
+  it('reports a failed approve with its message and keeps the drafts', async () => {
+    const { paths } = await makeRepo();
+    await writeReview(paths, REPO_ID, reviewDocument({ action: 'approve', summary: null }));
+
+    const forge = fakeForge({
+      getPullRequest: () => Promise.resolve(pullRequest()),
+      submit: () =>
+        Promise.resolve([
+          { draftId: 'd1', ok: false, error: 'Resource not accessible by integration' },
+          { draftId: '__review__', ok: false, error: 'Resource not accessible by integration' },
+        ]),
+    });
+    const response = await sendReview(
+      paths,
+      REPO_ID,
+      NUMBER,
+      { action: 'approve', summary: null, force: false },
+      { forgeFor: () => Promise.resolve(forge) },
+    );
+
+    expect(response.approval).toEqual({
+      action: 'approve',
+      ok: false,
+      error: 'Resource not accessible by integration',
+    });
+    expect(response.document.comments.map((item) => item.id)).toContain('d1');
+    expect(response.document.comments.find((item) => item.id === 'd1')?.sendError).toBe(
+      'Resource not accessible by integration',
+    );
+    expect(response.document.action).toBe('approve');
+  });
 });

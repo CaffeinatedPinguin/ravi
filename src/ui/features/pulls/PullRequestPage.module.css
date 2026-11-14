@@ -59,6 +59,14 @@
   font-size: 12px;
 }
 
+.approved {
+  padding: 0 7px;
+  border: 1px solid var(--add-text);
+  border-radius: 10px;
+  color: var(--add-text);
+  font-size: 11px;
+}
+
 .refs {
   font: 12px var(--font-mono);
 }

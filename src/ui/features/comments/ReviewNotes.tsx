@@ -8,6 +8,7 @@ import { useState } from 'react';
 import type { ReviewComment } from '../../../shared/review.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
 import { Composer } from './Composer.tsx';
+import { isRemoteDraft } from './remoteDrafts.ts';
 import type { ReviewStore } from './reviewStore.ts';
 import styles from './ReviewNotes.module.css';
 import { ThreadRow } from './Thread.tsx';
@@ -18,7 +19,7 @@ type ReviewNotesProps = { store: ReviewStore; onClose: () => void };
 export function ReviewNotes({ store, onClose }: ReviewNotesProps) {
   const [composing, setComposing] = useState(false);
   const document = store.document;
-  const general = document.comments.filter((comment) => comment.path === null);
+  const general = document.comments.filter((comment) => comment.path === null && !isRemoteDraft(comment));
 
   return (
     <section id="review-notes" className={styles.panel} aria-labelledby="review-notes-heading">

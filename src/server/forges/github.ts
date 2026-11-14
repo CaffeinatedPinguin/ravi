@@ -20,6 +20,7 @@ import type {
   Thread,
 } from '../../shared/forge.ts';
 import type { Forge, ForgeHost } from './forge.ts';
+import { REVIEW_RESULT_ID } from './forge.ts';
 import { ForgeError } from './http.ts';
 import type { ForgeHttp } from './http.ts';
 import { fileWebUrl } from './urls.ts';
@@ -209,8 +210,14 @@ export function createGitHubForge(host: ForgeHost, http: ForgeHttp): Forge {
         commit_id: pr.headSha,
         event,
         ...(reviewBody(summary, event) === undefined ? {} : { body: reviewBody(summary, event) }),
-        comments,
+        // An approve-only review must not carry an empty `comments` array: GitHub treats the key
+        // as an inline-comment request and rejects it when there is nothing to comment on.
+        ...(comments.length === 0 ? {} : { comments }),
       });
+      // The verdict travels in the same review as the comments, but its outcome is reported
+      // separately so the caller can show "approved" even when one inline comment failed.
+      let verdict: { ok: true; remoteId?: string } | { ok: false; error: string } | null =
+        action === null ? null : { ok: false, error: 'The review was not sent' };
 
       // 1. One review carries every new inline comment. GitHub creates a PENDING review when the
       //    event is omitted, so an event is always sent.
@@ -222,12 +229,16 @@ export function createGitHubForge(host: ForgeHost, http: ForgeHttp): Forge {
             reviewPayload(commentDrafts.map(commentPayload)),
             CREATED_SCHEMA,
           );
+          verdict = action === null ? null : { ok: true, remoteId: String(review.id) };
           for (const draft of commentDrafts) {
             // The review response has no comment ids; the review id identifies the batch.
             record(draft.draftId, { ok: true, remoteId: String(review.id) });
           }
         } catch (error) {
           const message = errorMessage(error);
+          if (action !== null) {
+            verdict = { ok: false, error: message };
+          }
           if (isAuthenticationFailure(error, 'review')) {
             fatal = message;
             for (const draft of commentDrafts) {
@@ -258,6 +269,10 @@ export function createGitHubForge(host: ForgeHost, http: ForgeHttp): Forge {
             reviewPayload([commentPayload(draft)]),
             CREATED_SCHEMA,
           );
+          // A retried comment is a full review, so it also carries the verdict if one was asked for.
+          if (action !== null) {
+            verdict = { ok: true, remoteId: String(review.id) };
+          }
           record(draft.draftId, { ok: true, remoteId: String(review.id) });
           return;
         } catch (error) {
@@ -421,9 +436,10 @@ export function createGitHubForge(host: ForgeHost, http: ForgeHttp): Forge {
         }
       }
 
-      return drafts.map(
+      const comments = drafts.map(
         (draft) => results.get(draft.draftId) ?? { draftId: draft.draftId, ok: false, error: 'Not sent' },
       );
+      return verdict === null ? comments : [...comments, { draftId: REVIEW_RESULT_ID, ...verdict }];
     },
   };
 }

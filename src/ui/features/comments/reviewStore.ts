@@ -248,6 +248,81 @@ export class ReviewStore {
     return id;
   }
 
+  /** A reply under a thread that already exists on the forge. */
+  replyToRemote(threadId: string, body: string): string {
+    return this.addRemoteDraft({ remoteThreadId: threadId, body });
+  }
+
+  /** An edit of the user's own forge comment; the draft body is what will replace the original. */
+  editRemote(threadId: string, remoteCommentId: string, body: string): string {
+    return this.addRemoteDraft({
+      remoteThreadId: threadId,
+      remoteCommentId,
+      pendingAction: 'edit',
+      body,
+    });
+  }
+
+  /** A deletion of the user's own forge comment; it is sent with the review like any draft. */
+  deleteRemote(threadId: string, remoteCommentId: string): string {
+    return this.addRemoteDraft({
+      remoteThreadId: threadId,
+      remoteCommentId,
+      pendingAction: 'delete',
+      body: '',
+    });
+  }
+
+  /**
+   * Replaces the document with the server's answer after a send. The server already persisted it,
+   * so this must not schedule another save.
+   */
+  applyServerDocument(document: ReviewDocument): void {
+    this.doc = document;
+    this.revision = 0;
+    this.savedRevision = 0;
+    this.status = 'saved';
+    this.saveError = null;
+    this.changed();
+  }
+
+  private addRemoteDraft(fields: {
+    remoteThreadId: string;
+    remoteCommentId?: string;
+    pendingAction?: 'edit' | 'delete';
+    body: string;
+  }): string {
+    const now = new Date().toISOString();
+    const id = `l-${randomId()}`;
+    this.mutate({
+      ...this.doc,
+      comments: [
+        ...this.doc.comments,
+        {
+          id,
+          parentId: null,
+          // A forge draft is addressed by its remote ids, not by a local file position; keeping
+          // the path null also keeps it out of the diff/Notes grouping.
+          path: null,
+          side: 'new',
+          line: null,
+          startLine: null,
+          body: fields.body,
+          author: null,
+          state: 'draft',
+          createdAt: now,
+          updatedAt: now,
+          codeContext: null,
+          outdated: false,
+          remoteThreadId: fields.remoteThreadId,
+          remoteCommentId: fields.remoteCommentId ?? null,
+          pendingAction: fields.pendingAction ?? null,
+        },
+      ],
+    });
+    return id;
+  }
+
   /** Best effort on `beforeunload`; the browser may end the page before the request finishes. */
   flush(): void {
     if (this.timer !== null) {

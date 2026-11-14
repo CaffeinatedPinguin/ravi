@@ -1,9 +1,10 @@
 /** The comment editor: Markdown with a preview tab, keyboard submit and image attachments. */
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, DragEvent, KeyboardEvent } from 'react';
-import { Button } from '../../components/controls.tsx';
+import { Button, IconButton } from '../../components/controls.tsx';
 import { uploadImage } from './assets.ts';
 import styles from './Comments.module.css';
+import { useComposerCapabilities } from './ComposerContext.ts';
 import { MarkdownView } from './MarkdownView.tsx';
 
 type ComposerProps = {
@@ -17,11 +18,13 @@ type ComposerProps = {
 type Tab = 'write' | 'preview';
 
 export function Composer({ initialBody = '', submitLabel, onSubmit, onCancel, autoFocus = true }: ComposerProps) {
+  const { imageUpload } = useComposerCapabilities();
   const [body, setBody] = useState(initialBody);
   const [tab, setTab] = useState<Tab>('write');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (autoFocus) {
@@ -85,6 +88,9 @@ export function Composer({ initialBody = '', submitLabel, onSubmit, onCancel, au
   };
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!imageUpload) {
+      return;
+    }
     const file = imageFromClipboard(event.clipboardData);
     if (file) {
       event.preventDefault();
@@ -94,7 +100,18 @@ export function Composer({ initialBody = '', submitLabel, onSubmit, onCancel, au
 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    if (!imageUpload) {
+      return;
+    }
     const file = event.dataTransfer.files[0];
+    if (file) {
+      void attach(file);
+    }
+  };
+
+  const onPickFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
     if (file) {
       void attach(file);
     }
@@ -150,6 +167,32 @@ export function Composer({ initialBody = '', submitLabel, onSubmit, onCancel, au
           </span>
         )}
         <span className={styles.spacer} />
+        {imageUpload ? (
+          <>
+            <IconButton
+              icon="upload"
+              label={uploading ? 'Uploading an image…' : 'Attach an image'}
+              disabled={uploading}
+              onClick={() => fileInput.current?.click()}
+            />
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              className={styles.fileInput}
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={onPickFile}
+            />
+          </>
+        ) : (
+          <span
+            className={styles.hint}
+            title="This forge cannot store images through its API; commit the image to the repository first."
+          >
+            Images unavailable
+          </span>
+        )}
         <Button variant="ghost" onClick={cancel}>
           Cancel
         </Button>

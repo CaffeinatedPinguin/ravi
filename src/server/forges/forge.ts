@@ -84,6 +84,14 @@ export interface Forge {
   ): Promise<SubmitResult[]>;
 }
 
+/**
+ * Pseudo draft id a strategy uses for the review-level verdict. `submit` normally returns one
+ * result per `DraftOperation`; when an action (approve / request changes / comment with a summary)
+ * was sent it also appends one result with this id, so the caller can report the verdict separately
+ * from the comment results without changing the return type.
+ */
+export const REVIEW_RESULT_ID = '__review__';
+
 /** Rejected promise used by skeleton strategies for methods a later task will implement. */
 export function notImplemented(): Promise<never> {
   return Promise.reject(new HttpError(501, 'Not implemented yet'));
