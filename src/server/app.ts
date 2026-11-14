@@ -5,6 +5,7 @@ import type { Health } from '../shared/api.ts';
 import { registerCloneRoutes } from './api/clones.ts';
 import { registerDiffRoutes } from './api/diff.ts';
 import { registerForgeRoutes } from './api/forges.ts';
+import { registerPullRoutes } from './api/pulls.ts';
 import { registerRepoRoutes } from './api/repos.ts';
 import { registerReviewRoutes } from './api/review.ts';
 import { Router } from './http/router.ts';
@@ -25,6 +26,7 @@ export function createRouter(context: AppContext): Router {
   registerRepoRoutes(router, context);
   registerCloneRoutes(router, context);
   registerForgeRoutes(router, context);
+  registerPullRoutes(router, context);
   registerDiffRoutes(router, context);
   registerReviewRoutes(router, context);
   return router;
