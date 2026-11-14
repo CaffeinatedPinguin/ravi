@@ -156,9 +156,10 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
     [settings.linkMode, repo, open.data],
   );
 
-  // `scrollToRow` is the API this page needs from the virtualizer; until DiffView exposes it the
-  // page falls back to opening the file (see `useThreadScroll`).
-  const diffView = useRef<DiffViewHandle & { scrollToRow?: (rowIndex: number) => void }>(null);
+  // `scrollToRow` is the API this page needs from the virtualizer; the hook falls back to opening
+  // the file when the session has no matching row yet.
+  const diffView = useRef<DiffViewHandle>(null);
+  const readDiffHandle = useCallback(() => diffView.current, []);
   const [activeFile, setActiveFile] = useState(0);
   const [tab, setTab] = useState<'files' | 'conversation'>('files');
   const [notesOpen, setNotesOpen] = useState(false);
@@ -180,15 +181,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
     },
     [fileCount],
   );
-  const scrollToRow = useCallback((rowIndex: number, fileIndex: number) => {
-    const handle = diffView.current;
-    if (handle?.scrollToRow !== undefined) {
-      handle.scrollToRow(rowIndex);
-    } else {
-      handle?.scrollToFile(fileIndex);
-    }
-  }, []);
-  useThreadScroll(open.data?.threads ?? [], tab, setTab, { session, scrollToRow });
+  useThreadScroll(open.data?.threads ?? [], tab, setTab, { session, handle: readDiffHandle });
 
   // Same keyboard model as the local review; `c` is handled by the diff itself.
   useEffect(() => {

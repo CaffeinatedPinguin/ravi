@@ -6,22 +6,21 @@ import { useEffect, useRef } from 'react';
 import type { Thread } from '../../../shared/forge.ts';
 import { useUrl } from '../../app/router.ts';
 import type { DiffSession } from '../diff/session.ts';
+import { scrollToThread } from './threadScroll.ts';
+import type { ThreadScrollHandle } from './threadScroll.ts';
 import { locateThread } from './threadTarget.ts';
 
 export type ThreadScrollOptions = {
   session: DiffSession | null;
-  /**
-   * Row scroll from the virtualizer; the row may not be rendered yet, so a DOM lookup alone is not
-   * enough. `fileIndex` lets the caller fall back when the view has no row scrolling yet.
-   */
-  scrollToRow: (rowIndex: number, fileIndex: number) => void;
+  /** Read lazily: the diff handle is null until DiffView mounts. */
+  handle: () => ThreadScrollHandle | null;
 };
 
 export function useThreadScroll(
   threads: readonly Thread[],
   tab: 'files' | 'conversation',
   openTab: (tab: 'files' | 'conversation') => void,
-  { session, scrollToRow }: ThreadScrollOptions,
+  { session, handle }: ThreadScrollOptions,
 ): void {
   const handled = useRef<string | null>(null);
   const threadId = useUrl().searchParams.get('thread');
@@ -36,17 +35,13 @@ export function useThreadScroll(
     }
 
     const target = locateThread(thread, session);
-    if (target === null) {
-      return;
-    }
-
-    if (target.kind === 'conversation') {
+    if (target?.kind === 'conversation') {
       if (tab !== 'conversation') {
         openTab('conversation');
         return;
       }
       handled.current = threadId;
-      focusThread(threadId);
+      focusThread(threadId, true);
       return;
     }
 
@@ -54,18 +49,31 @@ export function useThreadScroll(
       openTab('files');
       return;
     }
+    const outcome = scrollToThread(threadId, threads, session, handle());
+    if (outcome === 'missing') {
+      // The session may not have the thread rows yet; a later render retries this effect.
+      return;
+    }
     handled.current = threadId;
-    scrollToRow(target.rowIndex, target.fileIndex);
-    requestAnimationFrame(() => focusThread(threadId));
-  }, [threadId, threads, tab, openTab, session, scrollToRow]);
+    requestAnimationFrame(() => focusThread(threadId, false));
+  }, [threadId, threads, tab, openTab, session, handle]);
 }
 
-/** Thread rows get `tabIndex={-1}`, so they can take focus after the virtualizer reveals them. */
-function focusThread(threadId: string): void {
+/**
+ * Thread rows get `tabIndex={-1}`, so they can take focus. A virtualized row may need a frame (or
+ * two) before it exists; conversation threads still need `scrollIntoView` because no virtualizer
+ * moved them.
+ */
+function focusThread(threadId: string, scroll: boolean, attempts = 2): void {
   const element = document.getElementById(`thread-${threadId}`);
   if (element === null) {
+    if (attempts > 0) {
+      requestAnimationFrame(() => focusThread(threadId, scroll, attempts - 1));
+    }
     return;
   }
-  element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (scroll) {
+    element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
   element.focus({ preventScroll: true });
 }

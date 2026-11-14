@@ -9,6 +9,7 @@ import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
+import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
 import { showToast, ToastHost } from '../../components/Toast.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { downloadMarkdown, reviewFileName } from '../comments/download.ts';
@@ -24,6 +25,7 @@ import { RepoNav } from '../repos/RepoNav.tsx';
 import { DiffMessage, DiffPane } from './DiffPane.tsx';
 import { DiffStat } from './DiffStat.tsx';
 import styles from './ReviewPage.module.css';
+import { LOCAL_REVIEW_SHORTCUTS } from './shortcuts.ts';
 import { TargetPicker } from './TargetPicker.tsx';
 import { decodeTarget, encodeTarget, showsWorkingTree } from './target.ts';
 import { formatUpdatedAgo, useAutoRefresh } from './useAutoRefresh.ts';
@@ -451,6 +453,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           onApply={applyImport}
         />
       )}
+      <ShortcutsDialog shortcuts={LOCAL_REVIEW_SHORTCUTS} />
       <ToastHost />
     </div>
   );
