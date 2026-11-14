@@ -55,6 +55,27 @@ describe('ReviewStore', () => {
     expect(store.document.comments[1]?.body).toBe('second');
   });
 
+  it('replaceDocument saves once after the debounce and its undo restores the previous document', async () => {
+    const store = new ReviewStore(REPO_ID, target);
+    store.add(input);
+    await vi.advanceTimersByTimeAsync(800);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const previous = store.document;
+    const merged: ReviewDocument = { ...previous, summary: 'imported summary' };
+    const undo = store.replaceDocument(merged);
+
+    expect(store.document.summary).toBe('imported summary');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(800);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    undo();
+    expect(store.document).toBe(previous);
+    await vi.advanceTimersByTimeAsync(800);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('sets error on a failed save and retry saves the document', async () => {
     fetchMock.mockResolvedValueOnce(error('disk full'));
     const store = new ReviewStore(REPO_ID, target);
