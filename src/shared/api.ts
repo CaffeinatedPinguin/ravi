@@ -112,6 +112,13 @@ export type PatchesRequest = z.infer<typeof PatchesRequestSchema>;
 export const PatchesSchema = z.record(z.string(), z.string());
 export type Patches = z.infer<typeof PatchesSchema>;
 
+export const FingerprintRequestSchema = z.object({ target: DiffTargetSchema });
+export type FingerprintRequest = z.infer<typeof FingerprintRequestSchema>;
+
+/** A value that changes when the reviewed state changes; the UI compares it before reloading. */
+export const FingerprintSchema = z.object({ fingerprint: z.string() });
+export type Fingerprint = z.infer<typeof FingerprintSchema>;
+
 export const BlobRequestSchema = z.object({
   target: DiffTargetSchema,
   side: z.enum(['old', 'new']),

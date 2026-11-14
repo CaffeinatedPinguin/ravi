@@ -118,7 +118,51 @@
 }
 
 .body > nav {
-  border-right: 1px solid var(--border);
+  border-right: 0;
+}
+
+/* Drag target for the tree width; the visible line is drawn by the pseudo-element so the hit
+   area can be wider than the divider. */
+.resizer {
+  position: relative;
+  width: 5px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizer::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 2px;
+  width: 1px;
+  background: var(--border);
+}
+
+.resizer:hover::before,
+.resizer:focus-visible::before {
+  background: var(--accent);
+}
+
+.resizer:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.updated {
+  color: var(--text-faint);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.refreshing svg {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .message {
