@@ -100,4 +100,51 @@ describe('POST /api/reviews/export', () => {
     expect(response.markdown).toContain(join(paths.assets, assetId));
     expect(response.markdown).not.toContain(`asset:${assetId}`);
   });
+
+  it('leaves asset links inside fenced and inline code unchanged', async () => {
+    const assetId = `${'b'.repeat(64)}.png`;
+    const body = [
+      `outside ![shot](asset:${assetId})`,
+      '```text',
+      `inside ![code](asset:${assetId})`,
+      '```',
+      `inline \`![inline](asset:${assetId})\``,
+    ].join('\n');
+    const document: ReviewDocument = {
+      version: 1,
+      target: { kind: 'local', repoPath: repo, target: 'uncommitted' },
+      baseSha: null,
+      headSha: null,
+      action: null,
+      summary: null,
+      comments: [
+        {
+          id: 'l-2',
+          parentId: null,
+          path: 'a.txt',
+          side: 'new',
+          line: 1,
+          startLine: null,
+          body,
+          author: null,
+          state: 'draft',
+          createdAt: '2026-11-14T10:00:00.000Z',
+          updatedAt: '2026-11-14T10:00:00.000Z',
+          codeContext: null,
+          outdated: false,
+        },
+      ],
+    };
+
+    const router = new Router();
+    registerReviewRoutes(router, { paths });
+    const response = (await call(router, 'POST', '/api/reviews/export', {
+      repoId: REPO_ID,
+      diffTarget: { kind: 'uncommitted' },
+      document,
+    })) as { markdown: string };
+
+    expect(response.markdown).toContain(join(paths.assets, assetId));
+    expect(response.markdown.split(`asset:${assetId}`).length - 1).toBe(2);
+  });
 });

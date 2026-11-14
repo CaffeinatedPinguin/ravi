@@ -1,7 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { MAX_ASSET_BYTES } from '../../shared/api.ts';
 import { resolvePaths } from '../paths.ts';
 import { importLocalImage, readAsset, saveAsset } from './assets.ts';
 
@@ -65,6 +66,15 @@ describe('importLocalImage', () => {
     const file = join(outside, 'secret.png');
     writeFileSync(file, PNG);
     await expect(importLocalImage(paths, repo, file)).rejects.toThrow(/outside the repository/);
+  });
+
+  it('rejects an oversized file from its size before reading it', async () => {
+    mkdirp(repo);
+    const file = join(repo, 'huge.png');
+    writeFileSync(file, PNG);
+    // A sparse file keeps the test fast; `stat` sees the full size without reading the bytes.
+    truncateSync(file, MAX_ASSET_BYTES + 1);
+    await expect(importLocalImage(paths, repo, file)).rejects.toThrow(/10 MiB/);
   });
 
   it('refuses a symlink inside the repository that points outside it', async () => {

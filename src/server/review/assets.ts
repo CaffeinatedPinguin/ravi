@@ -7,7 +7,7 @@
  * path, and serving validates it against a fixed pattern first.
  */
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import { basename, isAbsolute, join, relative, sep } from 'node:path';
 import { ASSET_ID_PATTERN, MAX_ASSET_BYTES } from '../../shared/api.ts';
 import type { AssetType } from '../../shared/api.ts';
@@ -100,9 +100,19 @@ export async function importLocalImage(paths: Paths, repoRoot: string, absPath: 
   if (!isInside(target, assets) && !isInside(target, root)) {
     throw new HttpError(400, 'Image path is outside the repository and the assets folder');
   }
+  // Check the size before opening the file: an imported review must not make the server read a
+  // multi-gigabyte file (or a device) just to reject it afterwards.
+  const info = await stat(target);
+  if (!info.isFile()) {
+    throw new HttpError(400, 'Image path is not a regular file');
+  }
+  if (info.size > MAX_ASSET_BYTES) {
+    throw new HttpError(413, 'Image is larger than 10 MiB');
+  }
   const data = await readFile(target);
+  // Re-check: the file may have grown between `stat` and `readFile`.
   assertSize(data);
-  const type = detectType(data);
+  const type = detectImageType(data);
   if (type === null) {
     throw new HttpError(400, 'File is not a supported image');
   }
@@ -115,7 +125,8 @@ function assertSize(data: Buffer): void {
   }
 }
 
-function detectType(data: Buffer): AssetType | null {
+/** Magic-byte sniffing shared with the image proxy: a forge content type is never trusted. */
+export function detectImageType(data: Buffer): AssetType | null {
   for (const type of CONTENT_TYPES) {
     if (matchesType(data, type)) {
       return type;
