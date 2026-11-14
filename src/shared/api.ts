@@ -3,7 +3,13 @@
  * Every payload crossing the boundary has a Zod schema here; types are derived from it.
  */
 import { z } from 'zod';
-import { RepoRefSchema } from './forge.ts';
+import {
+  ForgeCapabilitiesSchema,
+  PullRequestSchema,
+  PullRequestStateSchema,
+  RepoRefSchema,
+  ThreadSchema,
+} from './forge.ts';
 import { ImportErrorSchema, ReviewDocumentSchema, ReviewTargetSchema } from './review.ts';
 
 /** Header every mutating request must carry; see `src/server/http/security.ts`. */
@@ -157,6 +163,78 @@ export const BlobRequestSchema = z.object({
 /** Whole file content at one side of the diff, for expanding context. */
 export const BlobSchema = z.object({ lines: z.array(z.string()) });
 export type Blob = z.infer<typeof BlobSchema>;
+
+// ── Pull requests ───────────────────────────────────────────────────────────
+
+/** Query of the pull request list; mirrors the UI toggles. */
+export const PullRequestListQuerySchema = z.object({
+  state: z.enum(['open', 'all']).default('open'),
+  mine: z.boolean().default(false),
+});
+export type PullRequestListQuery = z.infer<typeof PullRequestListQuerySchema>;
+
+/** Everything the review screen needs when opening a pull request. */
+export const PullRequestOpenSchema = z.object({
+  pullRequest: PullRequestSchema,
+  /** Three-dot comparison, like the forge's "Files changed" view. */
+  diffTarget: DiffTargetSchema,
+  diffSummary: DiffSummarySchema,
+  threads: z.array(ThreadSchema),
+  capabilities: ForgeCapabilitiesSchema,
+  currentUser: z.string(),
+  reviewTarget: ReviewTargetSchema,
+  /** Non-fatal surprises, e.g. the head moved between the forge call and the git fetch. */
+  warnings: z.array(z.string()),
+});
+export type PullRequestOpen = z.infer<typeof PullRequestOpenSchema>;
+
+/** Cheap "did this pull request change?" answer for the open review banner. */
+export const PullRequestStatusSchema = z.object({
+  headSha: z.string(),
+  state: PullRequestStateSchema,
+  updatedAt: z.string(),
+});
+export type PullRequestStatus = z.infer<typeof PullRequestStatusSchema>;
+
+// ── Review later ────────────────────────────────────────────────────────────
+
+/** The last status seen for a stored pull request; null until a refresh succeeded. */
+export const ReviewLaterLastKnownSchema = z.object({
+  headSha: z.string(),
+  state: PullRequestStateSchema,
+  updatedAt: z.string(),
+  checkedAt: z.string(),
+});
+export type ReviewLaterLastKnown = z.infer<typeof ReviewLaterLastKnownSchema>;
+
+/** What is written to `data/review-later.json`; derived fields are computed, never stored. */
+export const ReviewLaterStoredSchema = z.object({
+  repoId: z.string().min(1),
+  number: z.number().int().positive(),
+  title: z.string(),
+  addedAt: z.string(),
+  /** Head at the moment it was added, so a force-push is visible even after a restart. */
+  headShaAtAdd: z.string(),
+  lastKnown: ReviewLaterLastKnownSchema.nullable(),
+});
+export type ReviewLaterStored = z.infer<typeof ReviewLaterStoredSchema>;
+
+export const ReviewLaterEntrySchema = ReviewLaterStoredSchema.extend({
+  /** The head differs from the one that was added. */
+  changedSinceAdded: z.boolean(),
+  /** The last known state is no longer open. */
+  closed: z.boolean(),
+  /** Why the last refresh could not reach the forge; the previous `lastKnown` is kept. */
+  error: z.string().optional(),
+});
+export type ReviewLaterEntry = z.infer<typeof ReviewLaterEntrySchema>;
+export const ReviewLaterListSchema = z.array(ReviewLaterEntrySchema);
+
+export const ReviewLaterAddRequestSchema = z.object({
+  repoId: z.string().min(1),
+  number: z.number().int().positive(),
+});
+export type ReviewLaterAddRequest = z.infer<typeof ReviewLaterAddRequestSchema>;
 
 // ── Review comments ─────────────────────────────────────────────────────────
 
