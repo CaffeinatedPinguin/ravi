@@ -20,9 +20,19 @@ export class GitError extends Error {
   }
 }
 
+/** Exactly what a git child process gets; captured by tests through `onSpawn`. */
+export type SpawnInfo = {
+  args: string[];
+  env: NodeJS.ProcessEnv;
+};
+
 export type GitOptions = {
   /** Exit codes that count as success. `git diff --no-index` returns 1 when files differ. */
   okExitCodes?: number[];
+  /** Extra environment variables merged over the process environment (used for clone auth). */
+  env?: NodeJS.ProcessEnv;
+  /** Test seam: sees the arguments and environment just before spawn, so secrets can be checked. */
+  onSpawn?: (info: SpawnInfo) => void;
 };
 
 let running = 0;
@@ -31,7 +41,7 @@ const waiting: Array<() => void> = [];
 export async function git(cwd: string, args: string[], options: GitOptions = {}): Promise<Buffer> {
   await acquire();
   try {
-    return await runGit(cwd, args, options.okExitCodes ?? [0]);
+    return await runGit(cwd, args, options);
   } finally {
     release();
   }
@@ -41,9 +51,14 @@ export async function gitText(cwd: string, args: string[], options: GitOptions =
   return (await git(cwd, args, options)).toString('utf8');
 }
 
-function runGit(cwd: string, args: string[], okExitCodes: number[]): Promise<Buffer> {
+function runGit(cwd: string, args: string[], options: GitOptions): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', [...STABLE_CONFIG, ...args], { cwd, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const fullArgs = [...STABLE_CONFIG, ...args];
+    // `GIT_TERMINAL_PROMPT=0` guarantees that a network call can never hang waiting for a password:
+    // authentication must come from the clone environment or fail fast.
+    const env: NodeJS.ProcessEnv = { ...process.env, ...options.env, GIT_TERMINAL_PROMPT: '0' };
+    options.onSpawn?.({ args: fullArgs, env });
+    const child = spawn('git', fullArgs, { cwd, env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     let size = 0;
@@ -59,7 +74,7 @@ function runGit(cwd: string, args: string[], okExitCodes: number[]): Promise<Buf
     child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
     child.on('error', (error) => reject(new GitError(args, null, error.message)));
     child.on('close', (code) => {
-      if (code !== null && okExitCodes.includes(code)) {
+      if (code !== null && (options.okExitCodes ?? [0]).includes(code)) {
         resolve(Buffer.concat(stdout));
       } else {
         reject(new GitError(args, code, Buffer.concat(stderr).toString('utf8')));

@@ -1,9 +1,11 @@
-/** The list of connected local folders. */
+/** The list of connected local folders and remote clones. */
 import { createHash } from 'node:crypto';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { RepoListSchema } from '../../shared/api.ts';
 import type { Repo } from '../../shared/api.ts';
+import type { RepoRef } from '../../shared/forge.ts';
+import { detectRepoRef } from '../forges/remote.ts';
 import { findRepoRoot } from '../git/repo.ts';
 import { HttpError } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
@@ -33,10 +35,47 @@ export async function addRepo(paths: Paths, folder: string): Promise<Repo> {
   if (root === null) {
     throw new HttpError(400, `Not a git repository: ${folder}`);
   }
-  const repo: Repo = { id: repoId(root), path: root, name: basename(root), lastUsedAt: new Date().toISOString() };
+  // A local folder keeps using the user's own git credentials; the forge is remembered only so the
+  // UI can offer pull requests, never to authenticate git.
+  const repo: Repo = {
+    id: repoId(root),
+    path: root,
+    name: basename(root),
+    lastUsedAt: new Date().toISOString(),
+    kind: 'local',
+    remote: await detectRepoRef(root),
+  };
   const others = (await listRepos(paths)).filter((candidate) => candidate.id !== repo.id);
   await writeJsonFile(file(paths), [repo, ...others]);
   return repo;
+}
+
+/** Remembers a remote repository that has just been cloned; its path is derived, never user text. */
+export async function addRemoteRepo(paths: Paths, ref: RepoRef): Promise<Repo> {
+  const path = cloneFolder(paths, ref);
+  const repo: Repo = {
+    id: repoId(path),
+    path,
+    name: ref.project.split('/').at(-1) ?? ref.project,
+    lastUsedAt: new Date().toISOString(),
+    kind: 'remote',
+    remote: ref,
+  };
+  const others = (await listRepos(paths)).filter((candidate) => candidate.id !== repo.id);
+  await writeJsonFile(file(paths), [repo, ...others]);
+  return repo;
+}
+
+/** Records that a repository was used now, so automatic pruning leaves it alone. */
+export async function touchRepo(paths: Paths, id: string): Promise<Repo> {
+  const repos = await listRepos(paths);
+  const current = repos.find((candidate) => candidate.id === id);
+  if (current === undefined) {
+    throw new HttpError(404, 'Repository is not connected');
+  }
+  const updated: Repo = { ...current, lastUsedAt: new Date().toISOString() };
+  await writeJsonFile(file(paths), [updated, ...repos.filter((candidate) => candidate.id !== id)]);
+  return updated;
 }
 
 export async function removeRepo(paths: Paths, id: string): Promise<void> {
@@ -45,6 +84,19 @@ export async function removeRepo(paths: Paths, id: string): Promise<void> {
     file(paths),
     repos.filter((repo) => repo.id !== id),
   );
+}
+
+/**
+ * Where a remote repository is cloned: `clones/<host>/<project with / → __>.git`.
+ * Validating the two components here keeps every caller from turning a pasted URL into a path.
+ */
+export function cloneFolder(paths: Paths, ref: RepoRef): string {
+  const folder = ref.project.replaceAll('/', '__');
+  const hostOk = /^[a-z0-9][a-z0-9.-]*$/.test(ref.host) && !ref.host.includes('..');
+  if (folder === '' || folder === '.' || folder === '..' || /[\\/:]/.test(folder) || !hostOk) {
+    throw new HttpError(400, 'Invalid repository reference');
+  }
+  return join(paths.clones, ref.host, `${folder}.git`);
 }
 
 /** Finds git working trees below a folder, without descending into the repositories themselves. */
