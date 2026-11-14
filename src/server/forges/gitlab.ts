@@ -24,6 +24,7 @@ import type {
   Thread,
 } from '../../shared/forge.ts';
 import type { Forge, ForgeHost, ListPullRequestsOptions } from './forge.ts';
+import { REVIEW_RESULT_ID } from './forge.ts';
 import type { FetchLike, ForgeHttp } from './http.ts';
 import { ForgeError } from './http.ts';
 import { fileWebUrl } from './urls.ts';
@@ -478,6 +479,7 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
       const wantsRequestChanges = action === 'requestChanges';
       const shouldPublish = createdDrafts.length > 0 || summary !== null || wantsRequestChanges;
       let publishFailed: string | null = null;
+      let approvalFailed: string | null = null;
 
       if (shouldPublish) {
         const publishBody: Record<string, unknown> = {};
@@ -516,6 +518,9 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
         }
       }
 
+      // Approving is a separate endpoint that needs the current head SHA. It runs after the
+      // publish so the comments and the verdict arrive together; it is skipped when the publish
+      // already failed, because the user has to retry the whole review anyway.
       if (publishFailed === null && action === 'approve') {
         try {
           await http.send(
@@ -525,9 +530,19 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
             z.unknown(),
           );
         } catch (error) {
-          // There is no draft to attach the verdict to; the synthetic result lets the UI report it.
-          results.push({ draftId: 'approve', ok: false, error: errorText(error) });
+          approvalFailed = errorText(error);
         }
+      }
+
+      if (action !== null) {
+        // The verdict is reported as a synthetic result so it stays separate from the draft
+        // outcomes; a failed publish is a failed verdict for "request changes".
+        const verdictError = publishFailed ?? approvalFailed;
+        results.push(
+          verdictError === null
+            ? { draftId: REVIEW_RESULT_ID, ok: true, remoteId: pr.headSha }
+            : { draftId: REVIEW_RESULT_ID, ok: false, error: verdictError },
+        );
       }
 
       return results;

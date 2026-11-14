@@ -308,6 +308,41 @@ const threadRoute = {
 };
 
 describe('GitHub submit', () => {
+  it('approves with one review that has no comments and no empty body', async () => {
+    const { forge, fake } = make({
+      [`POST ${API}/repos/acme/api/pulls/1/reviews`]: { json: { id: 900 } },
+    });
+
+    const results = await forge.submit(repo, 1, pullRequest, [], 'approve', null);
+
+    const reviewCalls = fake.calls.filter(
+      (call) => call.method === 'POST' && call.url === `${API}/repos/acme/api/pulls/1/reviews`,
+    );
+    expect(reviewCalls).toHaveLength(1);
+    const body = JSON.parse(reviewCalls[0]?.body ?? '{}') as Record<string, unknown>;
+    expect(body).toMatchObject({ commit_id: 'head222', event: 'APPROVE' });
+    expect(body).not.toHaveProperty('comments');
+    expect(body).not.toHaveProperty('body');
+    expect(results).toEqual([{ draftId: '__review__', ok: true, remoteId: '900' }]);
+  });
+
+  it('sends a summary-only request-changes review with that body', async () => {
+    const { forge, fake } = make({
+      [`POST ${API}/repos/acme/api/pulls/1/reviews`]: { json: { id: 901 } },
+    });
+
+    const results = await forge.submit(repo, 1, pullRequest, [], 'requestChanges', 'Please add tests');
+
+    const reviewCalls = fake.calls.filter(
+      (call) => call.method === 'POST' && call.url === `${API}/repos/acme/api/pulls/1/reviews`,
+    );
+    expect(reviewCalls).toHaveLength(1);
+    const body = JSON.parse(reviewCalls[0]?.body ?? '{}') as Record<string, unknown>;
+    expect(body).toMatchObject({ event: 'REQUEST_CHANGES', body: 'Please add tests' });
+    expect(body).not.toHaveProperty('comments');
+    expect(results).toEqual([{ draftId: '__review__', ok: true, remoteId: '901' }]);
+  });
+
   it('sends one approval review, then replies to the root, a PR comment, an edit and a delete', async () => {
     const { forge, fake } = make({
       [`POST ${API}/repos/acme/api/pulls/1/reviews`]: { json: { id: 900 } },
@@ -363,6 +398,7 @@ describe('GitHub submit', () => {
       ['p1', true, '800'],
       ['e1', true, '600'],
       ['d1', true, '601'],
+      ['__review__', true, '900'],
     ]);
     expect(fake.calls.every((call) => new URL(call.url).origin === API)).toBe(true);
   });

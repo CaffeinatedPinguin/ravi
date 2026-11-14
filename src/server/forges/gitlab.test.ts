@@ -420,9 +420,10 @@ describe('GitLab submit', () => {
     });
 
     expect(publishBody).toEqual({ note: 'Overall summary', reviewer_state: 'requested_changes' });
-    expect(results).toHaveLength(drafts.length);
-    expect(results.every((result) => result.ok)).toBe(true);
-    expect(results.map((result) => result.remoteId)).toEqual(['100', '101', '102', '103', '104', '105', '106']);
+    expect(results).toHaveLength(drafts.length + 1);
+    expect(results.slice(0, -1).every((result) => result.ok)).toBe(true);
+    expect(results.slice(0, -1).map((result) => result.remoteId)).toEqual(['100', '101', '102', '103', '104', '105', '106']);
+    expect(results[results.length - 1]).toEqual({ draftId: '__review__', ok: true, remoteId: HEAD });
 
     const origin = new URL(API).origin;
     expect(inner.calls.every((call) => new URL(call.url).origin === origin)).toBe(true);
@@ -531,9 +532,11 @@ describe('GitLab submit', () => {
 
     const results = await forge.submit(REPO, MR, PR, drafts, 'requestChanges', null);
 
-    expect(results).toHaveLength(1);
+    expect(results).toHaveLength(2);
     expect(results[0]?.ok).toBe(false);
     expect(results[0]?.error).toContain('publish exploded');
+    expect(results[1]).toMatchObject({ draftId: '__review__', ok: false });
+    expect(results[1]?.error).toContain('publish exploded');
     expect(fake.calls.some((call) => call.method === 'DELETE' && call.url.endsWith('/draft_notes/55'))).toBe(true);
   });
 
@@ -548,14 +551,47 @@ describe('GitLab submit', () => {
 
     const results = await forge.submit(REPO, MR, PR, drafts, 'approve', null);
 
-    expect(results).toHaveLength(1);
+    expect(results).toHaveLength(2);
     expect(results[0]?.ok).toBe(true);
+    expect(results[1]).toEqual({ draftId: '__review__', ok: true, remoteId: HEAD });
 
     const publishIndex = fake.calls.findIndex((call) => call.url.endsWith('/bulk_publish'));
     const approveIndex = fake.calls.findIndex((call) => call.url.endsWith('/approve'));
     expect(publishIndex).toBeGreaterThanOrEqual(0);
     expect(approveIndex).toBeGreaterThan(publishIndex);
     expect(fake.calls[approveIndex]?.body).toBe(JSON.stringify({ sha: HEAD }));
+  });
+
+  it('approves a pull request without publishing any draft notes', async () => {
+    const { forge, fake } = makeForge({
+      [`POST ${MR_URL}/approve`]: { json: {} },
+    });
+
+    const results = await forge.submit(REPO, MR, PR, [], 'approve', null);
+
+    expect(results).toEqual([{ draftId: '__review__', ok: true, remoteId: HEAD }]);
+    expect(fake.calls.some((call) => call.url === DRAFT_NOTES_URL)).toBe(false);
+    expect(fake.calls.some((call) => call.url.endsWith('/bulk_publish'))).toBe(false);
+    const approveCalls = fake.calls.filter((call) => call.url === `${MR_URL}/approve`);
+    expect(approveCalls).toHaveLength(1);
+    expect(approveCalls[0]?.body).toBe(JSON.stringify({ sha: HEAD }));
+  });
+
+  it('publishes a request-changes summary when there are no draft notes', async () => {
+    let publishBody: unknown = null;
+    const { forge, fake } = makeForge({
+      [`POST ${DRAFT_NOTES_URL}/bulk_publish`]: (call: FakeCall): FakeResponse => {
+        publishBody = parseJson(call.body);
+        return { json: {} };
+      },
+    });
+
+    const results = await forge.submit(REPO, MR, PR, [], 'requestChanges', 'Please add tests');
+
+    expect(publishBody).toEqual({ note: 'Please add tests', reviewer_state: 'requested_changes' });
+    expect(results).toEqual([{ draftId: '__review__', ok: true, remoteId: HEAD }]);
+    expect(fake.calls.some((call) => call.url === DRAFT_NOTES_URL)).toBe(false);
+    expect(fake.calls.some((call) => call.url === `${MR_URL}/approve`)).toBe(false);
   });
 
   it('stops after a 401 and reports it on the remaining drafts', async () => {

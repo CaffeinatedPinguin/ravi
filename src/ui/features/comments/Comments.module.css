@@ -107,6 +107,32 @@
   margin-top: 4px;
 }
 
+/* A change that is waiting in the outbox; visually distinct from a real forge comment. */
+.pending {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-subtle);
+}
+
+.pendingLabel {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.pendingBody {
+  opacity: 0.9;
+}
+
+.deletedBody {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 .action {
   padding: 2px 6px;
   border: 0;
@@ -186,6 +212,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.fileInput {
+  display: none;
 }
 
 .spacer {

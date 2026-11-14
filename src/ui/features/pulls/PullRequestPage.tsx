@@ -4,14 +4,19 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PullRequestStatusSchema, RepoListSchema } from '../../../shared/api.ts';
-import { apiGet, apiSend } from '../../app/api.ts';
+import type { ReviewAction } from '../../../shared/forge.ts';
+import type { ReviewDocument } from '../../../shared/review.ts';
+import { apiGet, apiSend, ApiError } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
-import { ToastHost } from '../../components/Toast.tsx';
+import { showToast, ToastHost } from '../../components/Toast.tsx';
+import { ComposerCapabilitiesContext } from '../comments/ComposerContext.ts';
 import { MarkdownView } from '../comments/MarkdownView.tsx';
+import { isRemoteDraft } from '../comments/remoteDrafts.ts';
 import { ReviewNotes } from '../comments/ReviewNotes.tsx';
+import { SendActionsProvider } from '../comments/SendContext.ts';
 import { RemoteThread } from '../comments/Thread.tsx';
 import type { DiffViewHandle } from '../diff/DiffView.tsx';
 import { DiffSession } from '../diff/session.ts';
@@ -24,10 +29,23 @@ import { LinkModeProvider } from './LinkMode.tsx';
 import type { LinkContext } from './links.ts';
 import styles from './PullRequestPage.module.css';
 import { conversationThreads } from './remoteThreads.ts';
-import { PullRequestOpenResponseSchema } from './schemas.ts';
+import { PullRequestOpenResponseSchema, SendResponseSchema } from './schemas.ts';
+import { SendControls, SendDialog } from './SendControls.tsx';
+import { approveDisabledReason, buildSendPlan, countDrafts, targetLabel, verdictLabel } from './sendPlan.ts';
 import { pullRequestChanged } from './status.ts';
 
 type PullRequestPageProps = { repoId: string; number: number };
+
+/** Used only to build an empty confirmation plan before the document loads; never sent. */
+const EMPTY_DOCUMENT: ReviewDocument = {
+  version: 1,
+  target: { kind: 'local', repoPath: '', target: '' },
+  baseSha: null,
+  headSha: null,
+  action: null,
+  summary: null,
+  comments: [],
+};
 
 export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
   const { settings, update } = useSettings();
@@ -113,6 +131,11 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
   const [tab, setTab] = useState<'files' | 'conversation'>('files');
   const [notesOpen, setNotesOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
+  const [sendAction, setSendAction] = useState<ReviewAction | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<string | null>(null);
+  const [approved, setApproved] = useState(false);
   const treeWidth = previewWidth ?? settings.treeWidth;
   const fileCount = open.data?.diffSummary.files.length ?? 0;
 
@@ -145,8 +168,110 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
   }, [activeFile, goToFile, refresh]);
 
   const data = open.data;
-  const generalCount = store?.document.comments.filter((comment) => comment.path === null).length ?? 0;
+  const reviewDocument = store?.document ?? null;
+  const draftCounts = countDrafts(reviewDocument?.comments ?? []);
+  const generalCount =
+    reviewDocument?.comments.filter((comment) => comment.path === null && !isRemoteDraft(comment)).length ?? 0;
   const conversation = data === undefined ? [] : conversationThreads(data.threads);
+  const sendTarget =
+    data !== undefined && data.reviewTarget.kind === 'pullRequest'
+      ? targetLabel(data.reviewTarget.project, data.reviewTarget.number, data.reviewTarget.host)
+      : '';
+  const host = data !== undefined && data.reviewTarget.kind === 'pullRequest' ? data.reviewTarget.host : '';
+  const plan = buildSendPlan(reviewDocument ?? EMPTY_DOCUMENT, sendTarget, sendAction, reviewDocument?.summary ?? null);
+  const approveReason =
+    data === undefined || reviewDocument === null
+      ? 'The pull request is still loading'
+      : approveDisabledReason(data.pullRequest, data.currentUser);
+
+  const openSend = useCallback((action: ReviewAction) => {
+    setSendError(null);
+    setConflict(null);
+    setSendAction(action);
+  }, []);
+  const closeSend = useCallback(() => {
+    if (!sending) {
+      setSendAction(null);
+      setConflict(null);
+      setSendError(null);
+    }
+  }, [sending]);
+
+  /**
+   * The only place the page writes to the forge. The result replaces the document (successful
+   * drafts are gone, failures carry `sendError`) and the threads are re-read so pending changes
+   * change into real forge comments.
+   */
+  const submitSend = async (action: ReviewAction, force: boolean) => {
+    if (store === null) {
+      return;
+    }
+    setSending(true);
+    setSendError(null);
+    setConflict(null);
+    try {
+      const response = await apiSend(
+        'POST',
+        `/api/repos/${repoId}/pulls/${number}/send`,
+        { action, summary: store.document.summary, force },
+        SendResponseSchema,
+      );
+      store.applyServerDocument(response.document);
+      void open.reload();
+      setSendAction(null);
+      const ok = response.results.filter((result) => result.ok).length;
+      const failed = response.results.length - ok;
+      const verdict =
+        response.approval === null
+          ? ''
+          : response.approval.ok
+            ? ` · ${verdictLabel(response.approval.action)} sent`
+            : ` · ${verdictLabel(response.approval.action)} failed`;
+      showToast({ message: `Sent: ${ok} ok, ${failed} failed${verdict}` }, 7000);
+      if (response.approval?.ok === true && response.approval.action === 'approve') {
+        setApproved(true);
+      }
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status === 409) {
+        setConflict('This pull request has new commits since you opened it');
+      } else {
+        setSendError(reason instanceof Error ? reason.message : 'Could not send the review');
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /** Failed drafts stay in the document; the server sends only those on the next request. */
+  const retryFailed = async () => {
+    if (store === null) {
+      return;
+    }
+    setSending(true);
+    try {
+      const response = await apiSend(
+        'POST',
+        `/api/repos/${repoId}/pulls/${number}/send`,
+        { action: null, summary: null, force: true },
+        SendResponseSchema,
+      );
+      store.applyServerDocument(response.document);
+      void open.reload();
+      const ok = response.results.filter((result) => result.ok).length;
+      const failed = response.results.length - ok;
+      showToast({ message: `Retry: ${ok} ok, ${failed} failed` }, 6000);
+    } catch (reason) {
+      showToast({ message: reason instanceof Error ? reason.message : 'Retry failed' }, 6000);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sendActions = { retry: () => void retryFailed() };
+  const composerCapabilities = {
+    imageUpload: data?.capabilities.imageUpload ?? true,
+    threadedPrComments: data?.capabilities.threadedPrComments ?? true,
+  };
 
   return (
     <div className={page.page}>
@@ -186,6 +311,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
           </div>
           <p className={styles.byline}>
             <span>{data.pullRequest.author}</span>
+            {approved && <span className={styles.approved}>Approved by you</span>}
             <code className={styles.refs}>
               {data.pullRequest.baseRef} ← {data.pullRequest.headRef}
             </code>
@@ -267,6 +393,16 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
             Notes ({generalCount})
           </Button>
         )}
+        {data !== undefined && store !== null && (
+          <SendControls
+            count={draftCounts.total}
+            canSend={draftCounts.total > 0 || (reviewDocument?.summary ?? '').trim() !== ''}
+            approveDisabledReason={approveReason}
+            requestChanges={data.capabilities.requestChanges}
+            onApprove={() => openSend('approve')}
+            onOpen={openSend}
+          />
+        )}
         <IconButton
           icon="refresh"
           label="Fetch the pull request again (r)"
@@ -277,68 +413,95 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
       </div>
 
       <div className={styles.body}>
-        {open.error !== null && (
-          <div className={styles.message} role="alert">
-            <p>{open.error}</p>
-            <Button onClick={refresh}>Try again</Button>
-          </div>
-        )}
-        {open.error === null && data === undefined && <DiffMessage>Fetching pull request…</DiffMessage>}
-        {data !== undefined && tab === 'files' && (
-          <>
-            {fileCount === 0 && <DiffMessage>This pull request changes no files.</DiffMessage>}
-            {session !== null && store !== null && fileCount > 0 && (
-              <div className={page.body} style={{ gridTemplateColumns: `${treeWidth}px 5px 1fr` }}>
-                <LinkModeProvider context={linkContext}>
-                  <DiffPane
-                    session={session}
-                    store={store}
-                    repoPath={repo?.kind === 'local' ? repo.path : null}
-                    treeWidth={treeWidth}
-                    activeFile={activeFile}
-                    mode={settings.viewMode}
-                    expandStep={settings.expandStep}
-                    commentCount={(path) => store.commentCounts().get(path) ?? 0}
-                    onSelectFile={goToFile}
-                    onActiveFileChange={setActiveFile}
-                    onResize={setPreviewWidth}
-                    onCommitWidth={(width) => {
-                      setPreviewWidth(null);
-                      update({ treeWidth: width });
-                    }}
-                    viewRef={diffView}
-                  />
-                </LinkModeProvider>
+        <SendActionsProvider value={sendActions}>
+          <ComposerCapabilitiesContext.Provider value={composerCapabilities}>
+            {open.error !== null && (
+              <div className={styles.message} role="alert">
+                <p>{open.error}</p>
+                <Button onClick={refresh}>Try again</Button>
               </div>
             )}
-          </>
-        )}
-        {data !== undefined && tab === 'conversation' && (
-          <div className={styles.conversation}>
-            {notesOpen && store !== null && <ReviewNotes store={store} onClose={() => setNotesOpen(false)} />}
-            <section className={styles.description} aria-labelledby="pr-description">
-              <h2 id="pr-description">Description</h2>
-              {data.pullRequest.body.trim() === '' ? (
-                <p className={styles.muted}>The author wrote no description.</p>
-              ) : (
-                <MarkdownView body={data.pullRequest.body} />
-              )}
-            </section>
-            <section aria-labelledby="pr-threads">
-              <h2 id="pr-threads">Conversation</h2>
-              {conversation.length === 0 ? (
-                <p className={styles.muted}>No pull request level comments yet.</p>
-              ) : (
-                <div className={styles.threads}>
-                  {conversation.map((thread) => (
-                    <RemoteThread key={thread.id} thread={thread} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </div>
-        )}
+            {open.error === null && data === undefined && <DiffMessage>Fetching pull request…</DiffMessage>}
+            {data !== undefined && tab === 'files' && (
+              <>
+                {fileCount === 0 && <DiffMessage>This pull request changes no files.</DiffMessage>}
+                {session !== null && store !== null && fileCount > 0 && (
+                  <div className={page.body} style={{ gridTemplateColumns: `${treeWidth}px 5px 1fr` }}>
+                    <LinkModeProvider context={linkContext}>
+                      <DiffPane
+                        session={session}
+                        store={store}
+                        repoPath={repo?.kind === 'local' ? repo.path : null}
+                        treeWidth={treeWidth}
+                        activeFile={activeFile}
+                        mode={settings.viewMode}
+                        expandStep={settings.expandStep}
+                        commentCount={(path) => store.commentCounts().get(path) ?? 0}
+                        onSelectFile={goToFile}
+                        onActiveFileChange={setActiveFile}
+                        onResize={setPreviewWidth}
+                        onCommitWidth={(width) => {
+                          setPreviewWidth(null);
+                          update({ treeWidth: width });
+                        }}
+                        viewRef={diffView}
+                      />
+                    </LinkModeProvider>
+                  </div>
+                )}
+              </>
+            )}
+            {data !== undefined && tab === 'conversation' && (
+              <div className={styles.conversation}>
+                {notesOpen && store !== null && <ReviewNotes store={store} onClose={() => setNotesOpen(false)} />}
+                <section className={styles.description} aria-labelledby="pr-description">
+                  <h2 id="pr-description">Description</h2>
+                  {data.pullRequest.body.trim() === '' ? (
+                    <p className={styles.muted}>The author wrote no description.</p>
+                  ) : (
+                    <MarkdownView body={data.pullRequest.body} />
+                  )}
+                </section>
+                <section aria-labelledby="pr-threads">
+                  <h2 id="pr-threads">Conversation</h2>
+                  {conversation.length === 0 ? (
+                    <p className={styles.muted}>No pull request level comments yet.</p>
+                  ) : (
+                    <div className={styles.threads}>
+                      {store !== null &&
+                        conversation.map((thread) => (
+                          <RemoteThread key={thread.id} thread={thread} store={store} />
+                        ))}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
+          </ComposerCapabilitiesContext.Provider>
+        </SendActionsProvider>
       </div>
+      {data !== undefined && store !== null && (
+        <SendDialog
+          open={sendAction !== null}
+          plan={plan}
+          host={host}
+          sending={sending}
+          conflict={conflict}
+          error={sendError}
+          onClose={closeSend}
+          onSummaryChange={(summary) => store.setSummary(summary)}
+          onConfirm={(force) => {
+            if (sendAction !== null) {
+              void submitSend(sendAction, force);
+            }
+          }}
+          onReload={() => {
+            setSendAction(null);
+            setConflict(null);
+            refresh();
+          }}
+        />
+      )}
       <ToastHost />
     </div>
   );

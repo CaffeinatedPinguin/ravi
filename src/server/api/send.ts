@@ -11,7 +11,7 @@ import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import type { DiffTarget, Patches } from '../../shared/api.ts';
-import type { DraftOperation, SubmitResult } from '../../shared/forge.ts';
+import type { DraftOperation, ReviewAction, SubmitResult } from '../../shared/forge.ts';
 import { ReviewActionSchema, SubmitResultSchema } from '../../shared/forge.ts';
 import type { ReviewComment, ReviewDocument } from '../../shared/review.ts';
 import { ReviewDocumentSchema } from '../../shared/review.ts';
@@ -20,6 +20,7 @@ import { diffPatches, diffSummary } from '../git/diff.ts';
 import { HttpError } from '../http/router.ts';
 import type { Router } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
+import { REVIEW_RESULT_ID } from '../forges/forge.ts';
 import { forgeCall } from '../pulls/errors.ts';
 import { defaultForgeLookup, pullRequestNumber, requireRemote } from '../pulls/lookup.ts';
 import type { ForgeLookup } from '../pulls/lookup.ts';
@@ -42,8 +43,20 @@ export type SendRequest = z.infer<typeof SendRequestSchema>;
 export const SendResponseSchema = z.object({
   results: z.array(SubmitResultSchema),
   document: ReviewDocumentSchema,
+  /** Outcome of the review-level verdict; null when the request carried no action. */
+  approval: z
+    .object({
+      action: ReviewActionSchema,
+      ok: z.boolean(),
+      error: z.string().optional(),
+    })
+    .nullable(),
 });
-export type SendResponse = { results: SubmitResult[]; document: ReviewDocument };
+export type SendResponse = {
+  results: SubmitResult[];
+  document: ReviewDocument;
+  approval: { action: ReviewAction; ok: boolean; error?: string } | null;
+};
 
 export type SendDependencies = {
   /** Builds the forge strategy; tests replace it so no request leaves the process. */
@@ -90,12 +103,28 @@ export async function sendReview(
   const operations = buildOperations(document, await patchesFor(repo.path, pullRequest, document, deps.readPatches));
   // A forge-level failure (no token, 401/403/5xx) arrives before any result: the document stays as
   // it was, so nothing is lost and the user can retry.
-  const results = await forgeCall(() => forge.submit(remote, number, pullRequest, operations, request.action, request.summary));
+  const rawResults = await forgeCall(() =>
+    forge.submit(remote, number, pullRequest, operations, request.action, request.summary),
+  );
+  // The verdict is a synthetic result inside the same array (see `REVIEW_RESULT_ID`); the HTTP
+  // answer reports it separately so the UI can say "approved" alongside "2 comments failed".
+  const verdict = rawResults.find((result) => result.draftId === REVIEW_RESULT_ID) ?? null;
+  const results = rawResults.filter((result) => result.draftId !== REVIEW_RESULT_ID);
+  const approval: SendResponse['approval'] =
+    request.action === null
+      ? null
+      : {
+          action: request.action,
+          ok: verdict?.ok === true,
+          ...(verdict?.ok === true
+            ? {}
+            : { error: verdict?.error ?? 'The forge did not report the review outcome' }),
+        };
 
-  const updated = applyResults(document, operations, results);
+  const updated = applyResults(document, operations, results, approval);
   await writeReview(paths, repoId, updated);
   await appendSendLog(paths, repoId, number, request.action, operations, results);
-  return { results, document: updated };
+  return { results, document: updated, approval };
 }
 
 /**
@@ -139,11 +168,21 @@ async function patchesFor(
  * Mirrors the per-draft results into the document. A folded local reply has no operation of its
  * own, so it shares the outcome of the draft it was folded into.
  */
-function applyResults(document: ReviewDocument, operations: DraftOperation[], results: SubmitResult[]): ReviewDocument {
+function applyResults(
+  document: ReviewDocument,
+  operations: DraftOperation[],
+  results: SubmitResult[],
+  approval: SendResponse['approval'],
+): ReviewDocument {
   const byDraft = new Map(results.map((result) => [result.draftId, result]));
   const operationIds = new Set(operations.map((operation) => operation.draftId));
   const owners = ownerByDraft(document, operationIds);
-  const allSucceeded = operations.length === results.length && results.every((result) => result.ok);
+  // The verdict travels in its own request; a failed approve must keep the action so the user can
+  // retry it without re-sending comments that already went through.
+  const allSucceeded =
+    operations.length === results.length &&
+    results.every((result) => result.ok) &&
+    (approval === null || approval.ok);
 
   const comments = document.comments.flatMap((comment): ReviewComment[] => {
     if (comment.state !== 'draft') {

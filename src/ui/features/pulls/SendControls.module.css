@@ -1,0 +1,166 @@
+/* Send controls and the confirmation dialog. Theme variables only, so light and dark both work. */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.split {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 170px;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+.menuItem {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: var(--font-size) var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--bg-hover);
+}
+
+.dialog {
+  width: min(560px, 92vw);
+  max-height: 85vh;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-size) / 1.45 var(--font-ui);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dialogHeader h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.target {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.summary {
+  width: 100%;
+  min-height: 64px;
+  margin: 4px 0 10px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-size) / 1.45 var(--font-ui);
+  resize: vertical;
+}
+
+.counts {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.draftList {
+  display: flex;
+  max-height: 220px;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.draft {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-muted);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+}
+
+.draftKind {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.draftWhere {
+  color: var(--text);
+  font: 11px var(--font-mono);
+}
+
+.draftPreview {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conflict {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--accent-subtle);
+}
+
+.conflict p {
+  margin: 0 0 6px;
+}
+
+.error {
+  margin: 0 0 10px;
+  color: var(--danger);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
