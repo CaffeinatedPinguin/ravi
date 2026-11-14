@@ -5,6 +5,7 @@ import { PullRequestPage } from '../features/pulls/PullRequestPage.tsx';
 import { PullsPage } from '../features/pulls/PullsPage.tsx';
 import { HomePage } from '../features/repos/HomePage.tsx';
 import { ReviewPage } from '../features/review/ReviewPage.tsx';
+import { SettingsPage } from '../features/settings/SettingsPage.tsx';
 import { apiSend } from './api.ts';
 import { navigate, useUrl } from './router.ts';
 import { SettingsProvider } from './settings.tsx';
@@ -15,10 +16,13 @@ export function App() {
   const pullMatch = /^\/repo\/([^/]+)\/pull\/(\d+)$/.exec(url.pathname);
   const pullsMatch = /^\/repo\/([^/]+)\/pulls$/.exec(url.pathname);
   const repoMatch = /^\/repo\/([^/]+)$/.exec(url.pathname);
+  const settingsMatch = url.pathname === '/settings';
 
   return (
     <SettingsProvider>
-      {pullMatch?.[1] !== undefined ? (
+      {settingsMatch ? (
+        <SettingsPage />
+      ) : pullMatch?.[1] !== undefined ? (
         <PullRequestPage key={pullMatch[0]} repoId={pullMatch[1]} number={Number(pullMatch[2])} />
       ) : pullsMatch?.[1] !== undefined ? (
         <PullsPage key={pullsMatch[1]} repoId={pullsMatch[1]} />

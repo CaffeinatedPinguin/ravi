@@ -10,6 +10,7 @@ import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
 import { showToast, ToastHost } from '../../components/Toast.tsx';
+import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { downloadMarkdown, reviewFileName } from '../comments/download.ts';
 import { isImportableFile, readImportFile } from '../comments/importFile.ts';
 import { ImportDialog } from '../comments/ImportDialog.tsx';
@@ -321,6 +322,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           label="Switch between light and dark theme"
           onClick={() => update({ theme: document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark' })}
         />
+        <TopBarActions />
       </header>
 
       <div className={styles.toolbar}>

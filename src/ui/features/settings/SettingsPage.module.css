@@ -1,0 +1,178 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.brand {
+  color: var(--text);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.topTitle {
+  color: var(--text-muted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  overflow: auto;
+}
+
+.heading {
+  margin: 0 0 4px;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.lead {
+  margin: 0 0 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.section {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+
+.section h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.row + .row {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-muted);
+  margin-top: 8px;
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowLabel {
+  display: block;
+  font-weight: 500;
+}
+
+.hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.number,
+.tagInputRow input {
+  width: 110px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.tagField {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.tagRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tagRemove:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.tagInputRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tagInputRow input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.fieldError {
+  margin: 6px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.preview {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-muted);
+  color: var(--text-muted);
+  font-size: 12px;
+}
