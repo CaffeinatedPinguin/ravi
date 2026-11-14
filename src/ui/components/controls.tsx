@@ -33,10 +33,19 @@ export function IconButton({ icon, label, className, ...props }: Omit<ButtonProp
   );
 }
 
+type SegmentedOption<T extends string> = {
+  value: T;
+  label: string;
+  icon?: IconName;
+  /** Disabled options stay visible so the reason (a tooltip) can be read. */
+  disabled?: boolean;
+  title?: string;
+};
+
 type SegmentedProps<T extends string> = {
   label: string;
   value: T;
-  options: ReadonlyArray<{ value: T; label: string; icon?: IconName }>;
+  options: ReadonlyArray<SegmentedOption<T>>;
   onChange: (value: T) => void;
 };
 
@@ -50,6 +59,9 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
           type="button"
           role="radio"
           aria-checked={option.value === value}
+          aria-disabled={option.disabled === true ? true : undefined}
+          title={option.title}
+          disabled={option.disabled}
           className={styles.segment}
           onClick={() => onChange(option.value)}
         >

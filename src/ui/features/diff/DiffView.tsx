@@ -27,7 +27,7 @@ type DiffViewProps = {
   session: DiffSession;
   mode: ViewMode;
   expandStep: number;
-  repoPath: string;
+  repoPath: string | null;
   store: ReviewStore | null;
   onActiveFileChange: (fileIndex: number) => void;
   ref: Ref<DiffViewHandle>;

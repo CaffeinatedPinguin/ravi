@@ -1,6 +1,8 @@
 /** App shell: picks the screen from the URL and handles the folder passed by the CLI. */
 import { useEffect, useState } from 'react';
 import { RepoSchema } from '../../shared/api.ts';
+import { PullRequestPage } from '../features/pulls/PullRequestPage.tsx';
+import { PullsPage } from '../features/pulls/PullsPage.tsx';
 import { HomePage } from '../features/repos/HomePage.tsx';
 import { ReviewPage } from '../features/review/ReviewPage.tsx';
 import { apiSend } from './api.ts';
@@ -10,11 +12,17 @@ import { SettingsProvider } from './settings.tsx';
 export function App() {
   const url = useUrl();
   const openNotice = useOpenFolder(url.searchParams.get('open'));
+  const pullMatch = /^\/repo\/([^/]+)\/pull\/(\d+)$/.exec(url.pathname);
+  const pullsMatch = /^\/repo\/([^/]+)\/pulls$/.exec(url.pathname);
   const repoMatch = /^\/repo\/([^/]+)$/.exec(url.pathname);
 
   return (
     <SettingsProvider>
-      {repoMatch?.[1] !== undefined ? (
+      {pullMatch?.[1] !== undefined ? (
+        <PullRequestPage key={pullMatch[0]} repoId={pullMatch[1]} number={Number(pullMatch[2])} />
+      ) : pullsMatch?.[1] !== undefined ? (
+        <PullsPage key={pullsMatch[1]} repoId={pullsMatch[1]} />
+      ) : repoMatch?.[1] !== undefined ? (
         <ReviewPage key={repoMatch[1]} repoId={repoMatch[1]} targetParam={url.searchParams.get('t')} />
       ) : (
         <HomePage notice={openNotice} />

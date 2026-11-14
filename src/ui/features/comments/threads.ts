@@ -4,6 +4,7 @@
  * A thread is anchored to one path, side and line; the UI inserts it after that line. The key is
  * the same one a row carries, so the diff never has to search the document while rendering.
  */
+import type { Thread } from '../../../shared/forge.ts';
 import type { CommentSide, ReviewComment } from '../../../shared/review.ts';
 
 export type CommentThread = {
@@ -13,8 +14,10 @@ export type CommentThread = {
   /** Last line of the commented range; the thread row is anchored after it. */
   line: number;
   startLine: number | null;
-  /** Root comment first, then its replies in document order. */
+  /** Root comment first, then its replies in document order. Empty for a forge-only thread. */
   comments: ReviewComment[];
+  /** A read-only thread read from the forge; rendered next to `comments`, never edited locally. */
+  remote?: Thread;
 };
 
 /** NUL cannot appear in a path, so it safely separates the parts of a key. */

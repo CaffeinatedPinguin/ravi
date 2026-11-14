@@ -5,6 +5,7 @@ import type { CommentSide } from '../../../shared/review.ts';
 import { ComposerRow } from '../comments/ComposerRow.tsx';
 import type { ReviewStore } from '../comments/reviewStore.ts';
 import { ThreadRow } from '../comments/Thread.tsx';
+import { LineLink } from '../pulls/LinkMode.tsx';
 import { Button, IconButton } from '../../components/controls.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import styles from './DiffView.module.css';
@@ -23,8 +24,8 @@ type DiffRowProps = {
   session: DiffSession;
   store: ReviewStore | null;
   expandStep: number;
-  /** Absolute path of the repository, for the file path link. */
-  repoPath: string;
+  /** Absolute path of a local folder, or null for a remote clone (repo-relative links). */
+  repoPath: string | null;
   onFocusLine?: FocusLine;
 };
 
@@ -223,11 +224,13 @@ const STATUS_LABEL: Record<DiffFile['status'], string | null> = {
   untracked: 'Untracked',
 };
 
-type FileHeaderProps = { view: FileView; fileIndex: number; session: DiffSession; repoPath: string };
+type FileHeaderProps = { view: FileView; fileIndex: number; session: DiffSession; repoPath: string | null };
 
 export function FileHeader({ view, fileIndex, session, repoPath }: FileHeaderProps) {
   const { file } = view;
-  const absolutePath = `${repoPath}/${file.path}`;
+  const absolutePath = repoPath === null ? null : `${repoPath}/${file.path}`;
+  // A deleted file only exists on the base side, so its header link must use the old template.
+  const linkSide = file.status === 'deleted' ? 'old' : 'new';
   const status = STATUS_LABEL[file.status];
   const count = session.commentCount(file.path);
   const canExpand = view.load.status === 'loaded' && !view.collapsed && (file.status === 'modified' || file.status === 'renamed');
@@ -239,15 +242,8 @@ export function FileHeader({ view, fileIndex, session, repoPath }: FileHeaderPro
         aria-expanded={!view.collapsed}
         onClick={() => session.toggleCollapsed(fileIndex)}
       />
-      <button
-        type="button"
-        className={styles.path}
-        title={`Copy path: ${absolutePath}`}
-        onClick={() => void navigator.clipboard.writeText(absolutePath)}
-      >
-        {file.oldPath !== null && <span className={styles.oldPath}>{file.oldPath} → </span>}
-        {file.path}
-      </button>
+      {file.oldPath !== null && <span className={styles.oldPath}>{file.oldPath} → </span>}
+      <LineLink path={file.path} side={linkSide} line={null} className={styles.path} />
       {status !== null && (
         <span className={styles.badge} data-status={file.status}>
           {status}
@@ -265,7 +261,7 @@ export function FileHeader({ view, fileIndex, session, repoPath }: FileHeaderPro
       </span>
       <span className={styles.spacer} />
       {canExpand && <IconButton icon="expand" label="Show full file" onClick={() => void session.expandWholeFile(fileIndex)} />}
-      {file.status !== 'deleted' && (
+      {file.status !== 'deleted' && absolutePath !== null && (
         <a className={styles.headerLink} href={`vscode://file/${encodeURI(absolutePath)}`} title="Open in editor" aria-label="Open in editor">
           <Icon name="external" />
         </a>

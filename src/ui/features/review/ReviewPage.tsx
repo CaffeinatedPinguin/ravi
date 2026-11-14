@@ -1,5 +1,5 @@
 /** The review screen for one repository: top bar, review toolbar, file tree and the diff. */
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { DiffSummarySchema, RepoInfoSchema, RepoListSchema, ReviewExportResponseSchema } from '../../../shared/api.ts';
 import type { DiffOptions, DiffTarget } from '../../../shared/api.ts';
@@ -14,20 +14,19 @@ import { downloadMarkdown, reviewFileName } from '../comments/download.ts';
 import { isImportableFile, readImportFile } from '../comments/importFile.ts';
 import { ImportDialog } from '../comments/ImportDialog.tsx';
 import { ReviewNotes } from '../comments/ReviewNotes.tsx';
-import { ReviewStore } from '../comments/reviewStore.ts';
-import { DiffView } from '../diff/DiffView.tsx';
 import type { DiffViewHandle } from '../diff/DiffView.tsx';
-import { FileTree } from '../diff/FileTree.tsx';
 import { DiffSession } from '../diff/session.ts';
+import { LinkModeProvider } from '../pulls/LinkMode.tsx';
+import type { LinkContext } from '../pulls/links.ts';
+import { FileUrlTemplateSchema } from '../pulls/schemas.ts';
+import { RepoNav } from '../repos/RepoNav.tsx';
+import { DiffMessage, DiffPane } from './DiffPane.tsx';
 import { DiffStat } from './DiffStat.tsx';
 import styles from './ReviewPage.module.css';
 import { TargetPicker } from './TargetPicker.tsx';
 import { decodeTarget, encodeTarget, showsWorkingTree } from './target.ts';
-import { TreeResizer } from './TreeResizer.tsx';
 import { formatUpdatedAgo, useAutoRefresh } from './useAutoRefresh.ts';
-
-const NO_SUBSCRIBE = () => () => undefined;
-const ZERO = () => 0;
+import { useReviewStore } from './useReviewStore.ts';
 
 type ImportSeed = { markdown: string; fileName: string };
 
@@ -59,13 +58,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
     () => (repoPath === undefined ? null : { kind: 'local', repoPath, target: encodeTarget(target) }),
     [repoPath, target],
   );
-  const store = useMemo(() => (reviewTarget ? new ReviewStore(repoId, reviewTarget) : null), [repoId, reviewTarget]);
-  useEffect(() => {
-    if (store) {
-      void store.load();
-    }
-  }, [store]);
-  const storeVersion = useSyncExternalStore(store?.subscribe ?? NO_SUBSCRIBE, store?.getVersion ?? ZERO);
+  const { store, version: storeVersion } = useReviewStore(repoId, reviewTarget);
   useEffect(() => {
     if (session && store) {
       // `storeVersion` is the signal that the document changed; the document itself is mutable state.
@@ -76,21 +69,27 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   // The store caches per-file counts until the document itself changes, so the tree badge is
   // current in the same render as the mutation without walking every comment on scroll.
   const commentCounts = store?.commentCounts();
-  useEffect(() => {
-    if (!store) {
-      return;
-    }
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!store.hasUnsaved) {
-        return;
-      }
-      store.flush();
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [store]);
+
+  // URL links need a forge remote and a commit; the server builds the template. Without them the
+  // toggle stays on path mode and every link still copies a usable `path:line`.
+  const urlAvailable = repo?.remote !== null && repo?.remote !== undefined;
+  const wantsUrl = settings.linkMode === 'url' && urlAvailable;
+  const fileUrl = useAsync(
+    `file-url:${repoId}:${wantsUrl ? '1' : '0'}`,
+    (signal) =>
+      wantsUrl
+        ? apiGet(`/api/repos/${repoId}/file-url-template?sha=HEAD`, FileUrlTemplateSchema, signal)
+        : Promise.resolve(null),
+  );
+  const linkContext = useMemo<LinkContext>(
+    () => ({
+      mode: settings.linkMode,
+      repoPath: repo?.kind === 'local' ? repo.path : null,
+      urlTemplate: fileUrl.data?.fileUrlTemplate ?? null,
+      oldUrlTemplate: fileUrl.data?.oldFileUrlTemplate ?? null,
+    }),
+    [settings.linkMode, repo?.kind, repo?.path, fileUrl.data],
+  );
 
   const diffView = useRef<DiffViewHandle>(null);
   const [activeFile, setActiveFile] = useState(0);
@@ -301,6 +300,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         >
           revu
         </a>
+        <RepoNav repoId={repoId} active="local" showLocal={repo?.kind !== 'remote'} />
         <select
           aria-label="Repository"
           className={styles.repoSelect}
@@ -342,6 +342,20 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
             { value: 'split', label: 'Split', icon: 'split' },
           ]}
           onChange={(viewMode) => update({ viewMode })}
+        />
+        <Segmented
+          label="Link mode"
+          value={settings.linkMode}
+          options={[
+            { value: 'path', label: 'Path' },
+            {
+              value: 'url',
+              label: 'URL',
+              disabled: !urlAvailable,
+              title: urlAvailable ? 'Open files on the forge' : 'Connect a GitHub or GitLab remote to use forge URLs',
+            },
+          ]}
+          onChange={(linkMode) => update({ linkMode })}
         />
         <IconButton icon="collapse" label="Collapse all files" onClick={() => session?.setAllCollapsed(true)} />
         <span className={styles.updated} aria-live="polite">
@@ -389,40 +403,34 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
             <Button onClick={summary.reload}>Try again</Button>
           </div>
         )}
-        {summary.error === null && !session && <div className={styles.message}>Loading changes…</div>}
+        {summary.error === null && !session && <DiffMessage>Loading changes…</DiffMessage>}
         {session && fileCount === 0 && (
-          <div className={styles.message}>
+          <DiffMessage>
             <p>No changes to review here.</p>
             <p className={styles.hint}>Pick another comparison above, or make some changes and reload.</p>
-          </div>
+          </DiffMessage>
         )}
-        {session && fileCount > 0 && (
-          <>
-            <FileTree
-              files={session.files}
+        {session && store && fileCount > 0 && (
+          <LinkModeProvider context={linkContext}>
+            <DiffPane
+              session={session}
+              store={store}
+              repoPath={repo?.kind === 'local' ? repo.path : null}
+              treeWidth={treeWidth}
               activeFile={activeFile}
-              onSelect={goToFile}
+              mode={settings.viewMode}
+              expandStep={settings.expandStep}
               commentCount={(path) => commentCounts?.get(path) ?? 0}
-            />
-            <TreeResizer
-              width={treeWidth}
-              onChange={setPreviewWidth}
-              onCommit={(width) => {
+              onSelectFile={goToFile}
+              onActiveFileChange={setActiveFile}
+              onResize={setPreviewWidth}
+              onCommitWidth={(width) => {
                 setPreviewWidth(null);
                 update({ treeWidth: width });
               }}
+              viewRef={diffView}
             />
-            <DiffView
-              key={session.id}
-              ref={diffView}
-              session={session}
-              mode={settings.viewMode}
-              expandStep={settings.expandStep}
-              repoPath={repo?.path ?? ''}
-              store={store}
-              onActiveFileChange={setActiveFile}
-            />
-          </>
+          </LinkModeProvider>
         )}
       </div>
       {dragging && (

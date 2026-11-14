@@ -7,10 +7,13 @@
  */
 import type { PullRequestOpen, Repo } from '../../shared/api.ts';
 import type { RepoRef } from '../../shared/forge.ts';
+import type { ReviewTarget } from '../../shared/review.ts';
+import type { Forge } from '../forges/forge.ts';
 import { cloneEnv, fetchPullRequest as fetchIntoRefs } from '../git/clone.ts';
 import { diffSummary } from '../git/diff.ts';
 import { gitText } from '../git/exec.ts';
 import { resolveCommit } from '../git/repo.ts';
+import { readReview, writeReview } from '../review/store.ts';
 import { getRepo, touchRepo } from '../store/repos.ts';
 import type { Paths } from '../paths.ts';
 import { forgeCall } from './errors.ts';
@@ -29,6 +32,35 @@ export type OpenDependencies = {
   envFor: (repo: Repo, remote: RepoRef) => Promise<NodeJS.ProcessEnv>;
 };
 
+/**
+ * The answer of `open`, extended with the URL shapes the UI must not know by itself. The shared
+ * schema stays untouched because other tasks own it; the UI validates this with a local schema.
+ */
+export type PullRequestOpenResponse = PullRequestOpen & {
+  /** New-side file URL; `{path}` and `{line}` are filled by the UI. */
+  fileUrlTemplate: string;
+  /** Base-side file URL for old lines and deleted files. */
+  oldFileUrlTemplate: string;
+};
+
+/** Placeholders the forge URL is built with; they cannot collide with a real path or line number. */
+const TEMPLATE_PATH = 'REVU_PATH';
+const TEMPLATE_LINE = 999999;
+
+/**
+ * Turns one concrete forge URL into a template. The UI never learns GitHub's `/blob/` or GitLab's
+ * `/-/blob/` shape; it only fills the two placeholders the server put in.
+ */
+export function toFileUrlTemplate(url: string): string {
+  // Replace the anchor as a whole: a bare `999999` could legitimately appear in a project path.
+  return url.split(TEMPLATE_PATH).join('{path}').split(`#L${TEMPLATE_LINE}`).join('#L{line}');
+}
+
+/** A file URL template for one commit of a connected forge repository. */
+export function fileUrlTemplateFor(forge: Forge, remote: RepoRef, sha: string): string {
+  return toFileUrlTemplate(forge.webUrl(remote, sha, TEMPLATE_PATH, TEMPLATE_LINE));
+}
+
 export function defaultOpenDependencies(paths: Paths): OpenDependencies {
   return {
     forgeFor: defaultForgeLookup(paths),
@@ -42,7 +74,7 @@ export async function openPullRequest(
   repoId: string,
   number: number,
   overrides: Partial<OpenDependencies> = {},
-): Promise<PullRequestOpen> {
+): Promise<PullRequestOpenResponse> {
   const deps = { ...defaultOpenDependencies(paths), ...overrides };
   const repo = await getRepo(paths, repoId);
   const remote = requireRemote(repo);
@@ -77,6 +109,19 @@ export async function openPullRequest(
   const diffTarget = { kind: 'range' as const, from: baseSha, to: headSha, mergeBase: true };
   const summary = await diffSummary(repo.path, { target: diffTarget, ignoreWhitespace: false, includeUntracked: false });
 
+  const reviewTarget: ReviewTarget = {
+    kind: 'pullRequest',
+    host: remote.host,
+    project: remote.project,
+    number,
+    forge: forge.kind,
+  };
+
+  // Send must be able to tell that the pull request moved after the review was opened. The stored
+  // document keeps its comments: only the anchoring commits are refreshed here.
+  const stored = await readReview(paths, repo.id, reviewTarget);
+  await writeReview(paths, repo.id, { ...stored, baseSha, headSha });
+
   await touchRepo(paths, repo.id);
 
   return {
@@ -86,13 +131,9 @@ export async function openPullRequest(
     threads,
     capabilities: forge.capabilities,
     currentUser,
-    reviewTarget: {
-      kind: 'pullRequest',
-      host: remote.host,
-      project: remote.project,
-      number,
-      forge: forge.kind,
-    },
+    reviewTarget,
     warnings,
+    fileUrlTemplate: fileUrlTemplateFor(forge, remote, headSha),
+    oldFileUrlTemplate: fileUrlTemplateFor(forge, remote, baseSha),
   };
 }
