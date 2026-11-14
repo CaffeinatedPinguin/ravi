@@ -12,6 +12,7 @@ import styles from './DiffView.module.css';
 import { isMeasuredRow, rowHeight } from './rows.ts';
 import type { ViewMode } from './rows.ts';
 import type { DiffSession } from './session.ts';
+import { filesToRequest } from './visible.ts';
 
 /** Files past the viewport whose patches are fetched ahead of time. */
 const PRELOAD_FILES = 8;
@@ -93,19 +94,15 @@ export function DiffView({ session, mode, expandStep, repoPath, store, onActiveF
   }, [session, version, virtualizer, fileOffset]);
 
   const items = virtualizer.getVirtualItems();
-  const firstRow = items[0]?.index;
-  const lastRow = items.at(-1)?.index;
   const scrollTop = virtualizer.scrollOffset ?? 0;
   const activeFile = fileIndexAtOffset(scrollTop);
 
-  useEffect(() => {
-    if (firstRow === undefined || lastRow === undefined) {
-      return;
-    }
-    const from = session.fileIndexAtRow(firstRow);
-    const to = session.fileIndexAtRow(lastRow) + PRELOAD_FILES;
-    session.requestFiles(Array.from({ length: to - from + 1 }, (_, offset) => from + offset));
-  }, [session, firstRow, lastRow, version]);
+  // Ask for the visible patches during render, not in a passive effect. On a huge diff the first
+  // render happens before the virtualizer has measured the scroll element (`items` is empty), and
+  // waiting for that measurement moved the first `diff/patches` call seconds past the summary.
+  // `requestFiles` mutates the session only (it never bumps the React version), so repeating it on
+  // every render is safe and idempotent.
+  session.requestFiles(filesToRequest(session, items, PRELOAD_FILES));
 
   useEffect(() => onActiveFileChange(activeFile), [activeFile, onActiveFileChange]);
 
