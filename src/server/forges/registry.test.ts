@@ -77,7 +77,7 @@ describe('forgeStatus', () => {
     const headers = new Headers();
     githubHost?.auth('test-token-123', headers);
     expect(headers.get('authorization')).toBe('Bearer test-token-123');
-    expect(headers.get('x-github-api-version')).toBe('2022-11-28');
+    expect(headers.get('x-github-api-version')).toBe('2026-03-10');
 
     const gitlabHeaders = new Headers();
     gitlabHost?.auth('test-token-456', gitlabHeaders);

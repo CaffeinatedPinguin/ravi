@@ -18,7 +18,8 @@ export type { ForgeFactory, ForgeHost } from './forge.ts';
 
 function githubAuth(token: string, headers: Headers): void {
   headers.set('authorization', `Bearer ${token}`);
-  headers.set('x-github-api-version', '2022-11-28');
+  // API version shown by the GitHub docs on 2026-11-14.
+  headers.set('x-github-api-version', '2026-03-10');
   headers.set('accept', 'application/vnd.github+json');
 }
 
