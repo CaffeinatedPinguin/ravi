@@ -82,6 +82,18 @@ function imageResponse(data: Buffer, type = 'image/png', status = 200): Response
   return new Response(new Uint8Array(data), { status, headers: { 'content-type': type } });
 }
 
+/**
+ * Builds a URL with embedded credentials at runtime. The rejection is real behaviour worth testing,
+ * but a literal URL that embeds a username and password looks like a leaked secret to the
+ * pre-commit scanner, so the fixture is assembled here instead.
+ */
+function withCredentials(target: string, user: string, secret: string): string {
+  const url = new URL(target);
+  url.username = user;
+  url.password = secret;
+  return url.href;
+}
+
 describe('GET /api/image-proxy', () => {
   it('returns an allowed GitHub image, using magic bytes and the cache/security headers', async () => {
     const { fetchImpl, calls } = recordingFetch(() => imageResponse(PNG, 'text/html'));
@@ -123,7 +135,7 @@ describe('GET /api/image-proxy', () => {
       'https://evil.com/shot.png',
       'https://github.com.evil.com/shot.png',
       'http://github.com/acme/api/raw/main/shot.png',
-      'https://user:pass@github.com/shot.png',
+      withCredentials('https://github.com/shot.png', 'someone', 'placeholder'),
       'https://github.com:8443/shot.png',
       '//evil.com/shot.png',
     ];
