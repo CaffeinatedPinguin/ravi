@@ -1,0 +1,140 @@
+.page {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  height: 100%;
+}
+
+.topBar,
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.topBar {
+  height: 44px;
+  background: var(--bg-subtle);
+}
+
+.toolbar {
+  height: 40px;
+}
+
+.brand {
+  color: var(--text);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+}
+
+.topBar select,
+.topBar input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.repoSelect {
+  max-width: 220px;
+  font-weight: 500;
+}
+
+.branch {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  font: 12px var(--font-mono);
+}
+
+.target,
+.range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.range input {
+  width: 120px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.statAdd {
+  color: var(--add-text);
+}
+
+.statDel {
+  color: var(--del-text);
+}
+
+.statFiles {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.squares {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.squares span {
+  width: 8px;
+  height: 8px;
+  background: var(--border);
+}
+
+.squares span[data-kind='add'] {
+  background: var(--add-text);
+}
+
+.squares span[data-kind='del'] {
+  background: var(--del-text);
+}
+
+.body {
+  display: grid;
+  min-height: 0;
+}
+
+.body > * {
+  min-height: 0;
+}
+
+.body > nav {
+  border-right: 1px solid var(--border);
+}
+
+.message {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.message p {
+  margin: 0;
+}
+
+.hint {
+  color: var(--text-faint);
+}

@@ -1,0 +1,135 @@
+/*
+ * Design tokens and base styles. Components use these variables only, never raw colours,
+ * so the light and dark themes stay in one place.
+ */
+:root {
+  color-scheme: light;
+  --font-ui: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+  --font-size: 13px;
+  --code-size: 12px;
+
+  --bg: #ffffff;
+  --bg-subtle: #f6f8fa;
+  --bg-inset: #eff2f5;
+  --bg-hover: #eaeef2;
+  --bg-active: #dde3ea;
+  --border: #d5dbe1;
+  --border-muted: #e6eaee;
+  --text: #1f2328;
+  --text-muted: #5c6670;
+  --text-faint: #8a939c;
+  --accent: #0b62d6;
+  --accent-text: #ffffff;
+  --accent-subtle: #e2eefd;
+  --danger: #c62828;
+  --focus: #0b62d6;
+
+  --add-text: #116329;
+  --del-text: #b3261e;
+  --diff-add-bg: #e3f6e8;
+  --diff-add-gutter: #c5ecd0;
+  --diff-del-bg: #fdecea;
+  --diff-del-gutter: #f9d3cf;
+  --diff-gap-bg: #eef4fc;
+  --diff-empty-bg: #f6f8fa;
+
+  --shiki-foreground: var(--text);
+  --shiki-background: transparent;
+  --shiki-token-constant: #0550ae;
+  --shiki-token-string: #0a3069;
+  --shiki-token-comment: #6e7781;
+  --shiki-token-keyword: #cf222e;
+  --shiki-token-parameter: #24292f;
+  --shiki-token-function: #8250df;
+  --shiki-token-string-expression: #0a3069;
+  --shiki-token-punctuation: #24292f;
+  --shiki-token-link: #0969da;
+
+  --radius: 6px;
+  --shadow: 0 8px 24px rgb(31 35 40 / 14%);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0f1216;
+  --bg-subtle: #161a20;
+  --bg-inset: #1b2027;
+  --bg-hover: #222831;
+  --bg-active: #2b323c;
+  --border: #2f3640;
+  --border-muted: #232a32;
+  --text: #e3e8ee;
+  --text-muted: #9aa5b1;
+  --text-faint: #6c7783;
+  --accent: #4c94f6;
+  --accent-text: #0b0e12;
+  --accent-subtle: #152b4a;
+  --danger: #f2736b;
+  --focus: #6aa8ff;
+
+  --add-text: #56d27a;
+  --del-text: #ff8078;
+  --diff-add-bg: #12281b;
+  --diff-add-gutter: #1a3b27;
+  --diff-del-bg: #301a1a;
+  --diff-del-gutter: #482423;
+  --diff-gap-bg: #17222f;
+  --diff-empty-bg: #14181d;
+
+  --shiki-token-constant: #79c0ff;
+  --shiki-token-string: #a5d6ff;
+  --shiki-token-comment: #8b949e;
+  --shiki-token-keyword: #ff7b72;
+  --shiki-token-parameter: #e3e8ee;
+  --shiki-token-function: #d2a8ff;
+  --shiki-token-string-expression: #a5d6ff;
+  --shiki-token-punctuation: #c9d1d9;
+  --shiki-token-link: #58a6ff;
+
+  --shadow: 0 8px 24px rgb(0 0 0 / 50%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-size) / 1.45 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+a {
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

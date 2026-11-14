@@ -1,0 +1,8 @@
+packages:
+  - .
+
+# Do not install package versions published less than three days ago.
+minimumReleaseAge: 4320
+
+allowBuilds:
+  esbuild: false

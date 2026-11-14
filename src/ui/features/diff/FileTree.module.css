@@ -1,0 +1,113 @@
+.tree {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--bg-subtle);
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px;
+  padding: 0 8px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-faint);
+}
+
+.filter:focus-within {
+  border-color: var(--focus);
+}
+
+.filter input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.empty {
+  margin: 8px 12px;
+  color: var(--text-muted);
+}
+
+.item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 26px;
+  padding-right: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--bg-hover);
+}
+
+.item[aria-current='true'] {
+  background: var(--accent-subtle);
+}
+
+.item:focus-visible {
+  outline-offset: -2px;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  flex: none;
+  width: 14px;
+  font: 600 11px var(--font-mono);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.status[data-status='added'],
+.status[data-status='untracked'] {
+  color: var(--add-text);
+}
+
+.status[data-status='deleted'] {
+  color: var(--del-text);
+}
+
+.counts {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  font: 11px var(--font-mono);
+}
+
+.add {
+  color: var(--add-text);
+}
+
+.del {
+  color: var(--del-text);
+}

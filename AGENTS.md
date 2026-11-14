@@ -1,0 +1,40 @@
+# AGENTS.md — revu
+
+revu is a local code review tool with a GitHub/GitLab-like UI: review local git changes and
+GitHub.com/GitLab.com pull requests, keep comments as drafts, exchange them with AI agents as
+Markdown, and send them to the forge on demand. It ships as one JavaScript file that runs on Node.
+
+Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only local ones)
+
+## Read when
+
+| Task | Read |
+|---|---|
+| Understand the runtime, modules or data folder | `docs/architecture/overview.md` |
+| See scope, phases and what is done | `docs/specs/SPEC.md` |
+| Change packaging, runtime or dependencies | `docs/decisions/0001-stack-and-distribution.md` |
+| Commands, install and usage | `README.md` |
+
+## Local rules
+
+- KISS first. Apply SOLID and DRY only where they make the code simpler; abstract on the second real use (AHA).
+- New runtime dependencies need the owner's approval; prefer Node built-ins and small local code.
+- The server may import only `node:*` modules and `zod`; everything must bundle into `dist/revu.mjs`.
+- Server code must run under Node's type stripping: erasable TypeScript only, relative imports end in `.ts`.
+- `src/shared/` is the only contract between server and UI; every payload has a Zod schema there.
+- Nothing is written to a forge except through the explicit Send action; all other edits stay drafts.
+- Tokens come only from `~/.revu/.env`; never read them from the environment, never write or expose them.
+- Run git through the helpers in `src/server/git/`; never build a shell command string.
+- Comment the "why" (forge API quirks, git behaviour, performance), not the "what".
+- UI and review logic ask a forge for `capabilities`, never for its kind.
+
+## Verify
+
+- `pnpm test` — show command and output
+- `pnpm typecheck && pnpm lint` — show command and output
+- `pnpm build && node dist/revu.mjs --version` — show command and output
+
+## Never
+
+- Commit `.env` files or tokens (enforced by pre-commit TruffleHog hook)
+- Add `node_modules` or extra files to the release; `dist/` holds exactly `revu.mjs`, `revu`, `revu.cmd` (enforced by `scripts/finish-build.ts`)

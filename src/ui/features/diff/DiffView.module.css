@@ -1,0 +1,261 @@
+.view {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.scroll {
+  height: 100%;
+  overflow: auto;
+  /* Lets full-width rows (headers, notices) size themselves to the visible area with `cqw`. */
+  container-type: inline-size;
+}
+
+.scroll:focus-visible {
+  outline-offset: -2px;
+}
+
+.content {
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: var(--code-size);
+}
+
+.row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* Rows that should stay in view while the code scrolls sideways. */
+.pinnedWidth {
+  position: sticky;
+  left: 0;
+  width: 100cqw;
+  height: 100%;
+  font-family: var(--font-ui);
+  font-size: var(--font-size);
+}
+
+.pinnedHeader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  height: 41px;
+  box-shadow: 0 1px 0 var(--border), 0 4px 8px -4px rgb(0 0 0 / 20%);
+}
+
+.pinnedHeader .pinnedWidth {
+  width: 100%;
+}
+
+/* ── File header ─────────────────────────────────────────────── */
+
+.fileHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.path {
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font: 500 12px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.path:hover {
+  background: var(--bg-hover);
+}
+
+.oldPath {
+  color: var(--text-muted);
+}
+
+.badge {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.badge[data-status='added'],
+.badge[data-status='untracked'] {
+  color: var(--add-text);
+}
+
+.badge[data-status='deleted'] {
+  color: var(--del-text);
+}
+
+.counts {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  font: 12px var(--font-mono);
+}
+
+.add {
+  color: var(--add-text);
+}
+
+.del {
+  color: var(--del-text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.headerLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+}
+
+.headerLink:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* ── Code lines ──────────────────────────────────────────────── */
+
+.line,
+.half {
+  display: flex;
+  height: 20px;
+  line-height: 20px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 20px;
+}
+
+.half + .half {
+  border-left: 1px solid var(--border-muted);
+}
+
+.number {
+  flex: none;
+  width: 52px;
+  padding-right: 8px;
+  color: var(--text-faint);
+  text-align: right;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  flex: 1;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.sign {
+  display: inline-block;
+  width: 2ch;
+  text-align: center;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+[data-type='add'] {
+  background: var(--diff-add-bg);
+}
+
+[data-type='add'] > .number {
+  background: var(--diff-add-gutter);
+  color: var(--add-text);
+}
+
+[data-type='add'] .sign {
+  color: var(--add-text);
+}
+
+[data-type='del'] {
+  background: var(--diff-del-bg);
+}
+
+[data-type='del'] > .number {
+  background: var(--diff-del-gutter);
+  color: var(--del-text);
+}
+
+[data-type='del'] .sign {
+  color: var(--del-text);
+}
+
+[data-type='empty'] {
+  background: var(--diff-empty-bg);
+}
+
+/* ── Gap between hunks ───────────────────────────────────────── */
+
+.gap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  background: var(--diff-gap-bg);
+  color: var(--text-muted);
+}
+
+.gapText {
+  margin-left: 8px;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section {
+  margin-left: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+}
+
+/* ── Notices ─────────────────────────────────────────────────── */
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  color: var(--text-muted);
+}
+
+.skeleton {
+  width: min(480px, 60%);
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--bg-inset), var(--bg-hover), var(--bg-inset));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
