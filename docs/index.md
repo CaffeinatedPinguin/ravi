@@ -7,6 +7,7 @@ One line per document: `file — what it owns — read when`.
 | [docs/architecture/overview.md](architecture/overview.md) | Runtime model, module layout, data folder, security model | Starting any change |
 | [docs/decisions/0001-stack-and-distribution.md](decisions/0001-stack-and-distribution.md) | Node + single-file bundle, dependency policy | Changing packaging, runtime or dependencies |
 | [docs/specs/SPEC.md](specs/SPEC.md) | Product scope and the phase checklist | Planning or finishing a phase |
+| [docs/specs/review-format.md](specs/review-format.md) | Comment model and the self-explaining Markdown v1 exchange format | Reading, writing or versioning a review export |
 
 ## Rules
 
