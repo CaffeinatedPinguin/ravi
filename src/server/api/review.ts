@@ -120,9 +120,88 @@ async function codeContextFor(repoRoot: string, diffTarget: DiffTarget, comment:
   return lines.slice(start - 1, end).join('\n');
 }
 
-/** `asset:<id>` becomes the absolute file path a human or an AI can open directly. */
+/**
+ * `asset:<id>` becomes the absolute file path a human or an AI can open directly.
+ * Fenced and inline code are skipped: they quote text (often the very Markdown being discussed),
+ * and rewriting inside them would corrupt the example the author wanted to show.
+ */
 function replaceAssetLinks(body: string, paths: Paths): string {
-  return body.replace(ASSET_LINK, (_match, id: string) => join(paths.assets, id));
+  const output: string[] = [];
+  let fence: { char: string; length: number } | null = null;
+  for (const line of body.split('\n')) {
+    if (fence === null) {
+      const opened = fenceMarker(line);
+      if (opened !== null) {
+        fence = opened;
+      } else {
+        output.push(replaceOutsideCodeSpans(line, paths));
+      }
+      continue;
+    }
+    output.push(line);
+    if (isFenceClose(line, fence)) {
+      fence = null;
+    }
+  }
+  return output.join('\n');
+}
+
+function replaceOutsideCodeSpans(line: string, paths: Paths): string {
+  let result = '';
+  let index = 0;
+  while (index < line.length) {
+    const open = line.indexOf('`', index);
+    if (open < 0) {
+      result += replaceAssets(line.slice(index), paths);
+      break;
+    }
+    let run = 0;
+    while (line[open + run] === '`') {
+      run += 1;
+    }
+    const close = closingBackticks(line, open + run, run);
+    if (close < 0) {
+      result += replaceAssets(line.slice(index), paths);
+      break;
+    }
+    result += replaceAssets(line.slice(index, open), paths) + line.slice(open, close + run);
+    index = close + run;
+  }
+  return result;
+}
+
+function closingBackticks(line: string, from: number, length: number): number {
+  let index = from;
+  while (index < line.length) {
+    const found = line.indexOf('`', index);
+    if (found < 0) {
+      return -1;
+    }
+    let run = 0;
+    while (line[found + run] === '`') {
+      run += 1;
+    }
+    if (run === length) {
+      return found;
+    }
+    index = found + run;
+  }
+  return -1;
+}
+
+function replaceAssets(text: string, paths: Paths): string {
+  return text.replace(ASSET_LINK, (_match, id: string) => join(paths.assets, id));
+}
+
+function fenceMarker(line: string): { char: string; length: number } | null {
+  const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+  const char = marker?.[0];
+  return marker === undefined || char === undefined ? null : { char, length: marker.length };
+}
+
+function isFenceClose(line: string, fence: { char: string; length: number }): boolean {
+  const marker = /^ {0,3}(`{3,}|~{3,})[ \t]*$/.exec(line)?.[1];
+  return marker !== undefined && marker[0] === fence.char && marker.length >= fence.length;
 }
 
 async function importMarkdown(

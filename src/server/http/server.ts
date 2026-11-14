@@ -5,7 +5,7 @@ import { HttpError, raw, readJsonBody } from './router.ts';
 import type { RawResponse, Router } from './router.ts';
 import { assertAllowedHost, assertApiAccess, sessionCookie, tokensMatch } from './security.ts';
 import type { SecurityOptions } from './security.ts';
-import { serveUiAsset } from './static.ts';
+import { SECURITY_HEADERS, serveUiAsset } from './static.ts';
 import type { UiAssets } from './static.ts';
 
 export type ServerOptions = {
@@ -17,10 +17,22 @@ export type ServerOptions = {
 
 export function createHttpServer(options: ServerOptions): Server {
   return createServer((req, res) => {
-    respond(req, res, options).catch((error: unknown) => {
+    handleRequest(req, res, options).catch((error: unknown) => {
       sendError(res, error);
     });
   });
+}
+
+/**
+ * Exported so tests can drive the whole request path without opening a socket. Errors become the
+ * JSON error response here, so every answer (including a 4xx/5xx) gets the security headers.
+ */
+export async function handleRequest(req: IncomingMessage, res: ServerResponse, options: ServerOptions): Promise<void> {
+  try {
+    await respond(req, res, options);
+  } catch (error) {
+    sendError(res, error);
+  }
 }
 
 async function respond(req: IncomingMessage, res: ServerResponse, options: ServerOptions): Promise<void> {
@@ -77,16 +89,18 @@ function sessionHandshake(url: URL, token: string): RawResponse | null {
 
 function send(res: ServerResponse, result: unknown): void {
   if (isRawResponse(result)) {
-    res.writeHead(result.status, result.headers);
+    // Route-specific headers win (e.g. the asset route's own narrower CSP), everything else gets
+    // the baseline so no response can accidentally ship without them.
+    res.writeHead(result.status, { ...SECURITY_HEADERS, ...result.headers });
     res.end(result.body);
     return;
   }
   if (result === undefined) {
-    res.writeHead(204);
+    res.writeHead(204, SECURITY_HEADERS);
     res.end();
     return;
   }
-  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(JSON.stringify(result));
 }
 
@@ -100,7 +114,11 @@ function sendError(res: ServerResponse, error: unknown): void {
     res.end();
     return;
   }
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  res.writeHead(status, {
+    ...SECURITY_HEADERS,
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
   res.end(JSON.stringify({ error: message }));
 }
 
