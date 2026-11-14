@@ -4,8 +4,11 @@ import {
   approveDisabledReason,
   buildSendPlan,
   countDrafts,
+  nextVerdictFailure,
   planText,
+  retryVerdictLabel,
   targetLabel,
+  verdictFailureTitle,
 } from './sendPlan.ts';
 
 function comment(overrides: Partial<ReviewComment> & Pick<ReviewComment, 'id'>): ReviewComment {
@@ -69,6 +72,37 @@ describe('approveDisabledReason', () => {
     expect(approveDisabledReason({ author: 'octocat', state: 'closed' }, 'me')).toBe(
       'Only an open pull request can be approved',
     );
+  });
+});
+
+describe('nextVerdictFailure', () => {
+  it('shows the forge error after a failed approval', () => {
+    const failure = nextVerdictFailure(null, { action: 'approve', ok: false, error: 'Forge rejected the review' });
+
+    expect(failure).toEqual({ action: 'approve', error: 'Forge rejected the review' });
+    expect(failure === null ? null : verdictFailureTitle(failure)).toBe('Approve failed');
+    expect(failure === null ? null : retryVerdictLabel(failure.action)).toBe('Retry approve');
+  });
+
+  it('falls back to a readable error when the forge sent none', () => {
+    expect(nextVerdictFailure(null, { action: 'requestChanges', ok: false })).toEqual({
+      action: 'requestChanges',
+      error: 'The forge did not report the review outcome',
+    });
+  });
+
+  it('clears the notice after a successful retry and keeps it while the verdict keeps failing', () => {
+    const failed = { action: 'approve' as const, error: 'Forge rejected the review' };
+    const stillFailed = nextVerdictFailure(failed, { action: 'approve', ok: false, error: 'Still rejected' });
+    expect(stillFailed).toEqual({ action: 'approve', error: 'Still rejected' });
+    expect(nextVerdictFailure(stillFailed, { action: 'approve', ok: true })).toBeNull();
+  });
+
+  it('ignores plain comment reviews, which report failures per draft', () => {
+    const current = { action: 'approve' as const, error: 'Forge rejected the review' };
+    expect(nextVerdictFailure(current, { action: 'comment', ok: false, error: 'nope' })).toBe(current);
+    expect(nextVerdictFailure(current, { action: 'comment', ok: true })).toBe(current);
+    expect(nextVerdictFailure(null, null)).toBeNull();
   });
 });
 

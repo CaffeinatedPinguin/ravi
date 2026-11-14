@@ -1,0 +1,58 @@
+/* Keyboard help: quiet, compact and readable in both themes. */
+
+.dialog {
+  width: min(480px, 92vw);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-size) / 1.45 var(--font-ui);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 6px 0;
+  border-top: 1px solid var(--border-muted);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  width: 42%;
+  padding-right: 12px;
+  font-weight: 400;
+}
+
+.keys {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-inset);
+  color: var(--text);
+  font: 11px var(--font-mono);
+  white-space: nowrap;
+}

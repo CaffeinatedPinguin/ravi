@@ -28,6 +28,10 @@ export function ThreadRow({ threads, store, reviewLevel = false }: ThreadRowProp
         <section
           // Several outside threads share one key; the forge id keeps React's list stable.
           key={thread.remote?.id ?? thread.key}
+          // Notification links land on `thread-<forge id>`; tabIndex lets the hook focus it after the
+          // virtualizer scrolls the row into view.
+          id={thread.remote === undefined ? undefined : `thread-${thread.remote.id}`}
+          tabIndex={thread.remote === undefined ? undefined : -1}
           className={reviewLevel ? `${styles.thread} ${styles.noteThread}` : styles.thread}
           aria-label={
             reviewLevel

@@ -97,6 +97,22 @@
   font-size: 12px;
 }
 
+/* A failed verdict stays visible under the header; a toast alone disappears before a retry. */
+.verdictNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--danger);
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.verdictNotice strong {
+  color: var(--danger);
+}
+
 .body {
   display: flex;
   flex: 1;

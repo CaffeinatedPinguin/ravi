@@ -3,16 +3,25 @@
  * into view. Inbox and desktop notifications link here, so a click lands on the new comment.
  */
 import { useEffect, useRef } from 'react';
-import type { DiffFile } from '../../../shared/api.ts';
 import type { Thread } from '../../../shared/forge.ts';
 import { useUrl } from '../../app/router.ts';
+import type { DiffSession } from '../diff/session.ts';
+import { locateThread } from './threadTarget.ts';
+
+export type ThreadScrollOptions = {
+  session: DiffSession | null;
+  /**
+   * Row scroll from the virtualizer; the row may not be rendered yet, so a DOM lookup alone is not
+   * enough. `fileIndex` lets the caller fall back when the view has no row scrolling yet.
+   */
+  scrollToRow: (rowIndex: number, fileIndex: number) => void;
+};
 
 export function useThreadScroll(
   threads: readonly Thread[],
   tab: 'files' | 'conversation',
   openTab: (tab: 'files' | 'conversation') => void,
-  files: readonly DiffFile[],
-  openFile: (index: number) => void,
+  { session, scrollToRow }: ThreadScrollOptions,
 ): void {
   const handled = useRef<string | null>(null);
   const threadId = useUrl().searchParams.get('thread');
@@ -26,30 +35,37 @@ export function useThreadScroll(
       return;
     }
 
-    if (thread.path !== null) {
-      // Inline threads live inside the diff, whose rows do not expose a stable DOM id; opening the
-      // right file is the closest the UI can get without changing the comment components.
-      if (tab !== 'files') {
-        openTab('files');
-        return;
-      }
-      const index = files.findIndex((file) => file.path === thread.path);
-      if (index >= 0) {
-        openFile(index);
-      }
-      handled.current = threadId;
+    const target = locateThread(thread, session);
+    if (target === null) {
       return;
     }
 
-    if (tab !== 'conversation') {
-      openTab('conversation');
+    if (target.kind === 'conversation') {
+      if (tab !== 'conversation') {
+        openTab('conversation');
+        return;
+      }
+      handled.current = threadId;
+      focusThread(threadId);
       return;
     }
-    const element = document.getElementById(`thread-${threadId}`);
-    if (element === null) {
+
+    if (tab !== 'files') {
+      openTab('files');
       return;
     }
     handled.current = threadId;
-    element.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [threadId, threads, tab, openTab, files, openFile]);
+    scrollToRow(target.rowIndex, target.fileIndex);
+    requestAnimationFrame(() => focusThread(threadId));
+  }, [threadId, threads, tab, openTab, session, scrollToRow]);
+}
+
+/** Thread rows get `tabIndex={-1}`, so they can take focus after the virtualizer reveals them. */
+function focusThread(threadId: string): void {
+  const element = document.getElementById(`thread-${threadId}`);
+  if (element === null) {
+    return;
+  }
+  element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  element.focus({ preventScroll: true });
 }

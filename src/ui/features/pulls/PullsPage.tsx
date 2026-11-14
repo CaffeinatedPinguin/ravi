@@ -7,6 +7,7 @@ import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
+import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { relativeTime } from '../comments/threads.ts';
 import { RepoNav } from '../repos/RepoNav.tsx';
 import page from '../review/ReviewPage.module.css';
@@ -86,6 +87,7 @@ export function PullsPage({ repoId }: PullsPageProps) {
           label="Switch between light and dark theme"
           onClick={() => update({ theme: document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark' })}
         />
+        <TopBarActions />
       </header>
 
       <div className={page.toolbar}>

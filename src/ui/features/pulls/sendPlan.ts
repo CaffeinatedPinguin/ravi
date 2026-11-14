@@ -83,6 +83,34 @@ export function approveDisabledReason(
   return null;
 }
 
+/** The verdict outcome the send route reports next to the per-draft results. */
+export type VerdictApproval = { action: ReviewAction; ok: boolean; error?: string } | null;
+
+/** A failed approve/request-changes kept on screen until a retry succeeds or the user dismisses it. */
+export type VerdictFailure = { action: ReviewAction; error: string };
+
+/**
+ * Persistent notice state. Only verdicts get one: a failed comment still has its per-draft error.
+ * A successful response for the same verdict clears it, which is also how a retry disappears.
+ */
+export function nextVerdictFailure(current: VerdictFailure | null, approval: VerdictApproval): VerdictFailure | null {
+  if (approval === null || approval.action === 'comment') {
+    return current;
+  }
+  if (approval.ok) {
+    return null;
+  }
+  return { action: approval.action, error: approval.error ?? 'The forge did not report the review outcome' };
+}
+
+export function verdictFailureTitle(failure: VerdictFailure): string {
+  return failure.action === 'requestChanges' ? 'Request changes failed' : 'Approve failed';
+}
+
+export function retryVerdictLabel(action: ReviewAction): string {
+  return action === 'requestChanges' ? 'Retry request changes' : 'Retry approve';
+}
+
 export function verdictLabel(action: ReviewAction | null): string {
   switch (action) {
     case 'approve':

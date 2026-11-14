@@ -11,6 +11,8 @@ import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
+import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
+import type { Shortcut } from '../../components/ShortcutsDialog.tsx';
 import { showToast, ToastHost } from '../../components/Toast.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { ComposerCapabilitiesContext } from '../comments/ComposerContext.ts';
@@ -34,10 +36,35 @@ import styles from './PullRequestPage.module.css';
 import { conversationThreads } from './remoteThreads.ts';
 import { PullRequestOpenResponseSchema, SendResponseSchema } from './schemas.ts';
 import { SendControls, SendDialog } from './SendControls.tsx';
-import { approveDisabledReason, buildSendPlan, countDrafts, targetLabel, verdictLabel } from './sendPlan.ts';
+import type { VerdictFailure } from './sendPlan.ts';
+import {
+  approveDisabledReason,
+  buildSendPlan,
+  countDrafts,
+  nextVerdictFailure,
+  retryVerdictLabel,
+  targetLabel,
+  verdictFailureTitle,
+  verdictLabel,
+} from './sendPlan.ts';
 import { pullRequestChanged } from './status.ts';
 
 type PullRequestPageProps = { repoId: string; number: number };
+
+const FILE_SHORTCUTS: readonly Shortcut[] = [
+  { keys: 'j / k', description: 'Next / previous file' },
+  { keys: 'r', description: 'Refresh the pull request' },
+  { keys: 'c', description: 'Comment on the focused line' },
+  { keys: 'Ctrl/Cmd + Shift + Enter', description: 'Open the send confirmation' },
+  { keys: '?', description: 'Show this dialog' },
+];
+
+const CONVERSATION_SHORTCUTS: readonly Shortcut[] = [
+  { keys: 'j / k', description: 'Next / previous file' },
+  { keys: 'r', description: 'Refresh the pull request' },
+  { keys: 'Ctrl/Cmd + Shift + Enter', description: 'Open the send confirmation' },
+  { keys: '?', description: 'Show this dialog' },
+];
 
 /** Used only to build an empty confirmation plan before the document loads; never sent. */
 const EMPTY_DOCUMENT: ReviewDocument = {
@@ -129,7 +156,9 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
     [settings.linkMode, repo, open.data],
   );
 
-  const diffView = useRef<DiffViewHandle>(null);
+  // `scrollToRow` is the API this page needs from the virtualizer; until DiffView exposes it the
+  // page falls back to opening the file (see `useThreadScroll`).
+  const diffView = useRef<DiffViewHandle & { scrollToRow?: (rowIndex: number) => void }>(null);
   const [activeFile, setActiveFile] = useState(0);
   const [tab, setTab] = useState<'files' | 'conversation'>('files');
   const [notesOpen, setNotesOpen] = useState(false);
@@ -137,6 +166,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
   const [sendAction, setSendAction] = useState<ReviewAction | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [verdictFailure, setVerdictFailure] = useState<VerdictFailure | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
   const [approved, setApproved] = useState(false);
   const treeWidth = previewWidth ?? settings.treeWidth;
@@ -150,7 +180,15 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
     },
     [fileCount],
   );
-  useThreadScroll(open.data?.threads ?? [], tab, setTab, open.data?.diffSummary.files ?? [], goToFile);
+  const scrollToRow = useCallback((rowIndex: number, fileIndex: number) => {
+    const handle = diffView.current;
+    if (handle?.scrollToRow !== undefined) {
+      handle.scrollToRow(rowIndex);
+    } else {
+      handle?.scrollToFile(fileIndex);
+    }
+  }, []);
+  useThreadScroll(open.data?.threads ?? [], tab, setTab, { session, scrollToRow });
 
   // Same keyboard model as the local review; `c` is handled by the diff itself.
   useEffect(() => {
@@ -223,6 +261,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
       store.applyServerDocument(response.document);
       void open.reload();
       setSendAction(null);
+      setVerdictFailure((current) => nextVerdictFailure(current, response.approval));
       const ok = response.results.filter((result) => result.ok).length;
       const failed = response.results.length - ok;
       const verdict =
@@ -264,6 +303,44 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
       const ok = response.results.filter((result) => result.ok).length;
       const failed = response.results.length - ok;
       showToast({ message: `Retry: ${ok} ok, ${failed} failed` }, 6000);
+    } catch (reason) {
+      showToast({ message: reason instanceof Error ? reason.message : 'Retry failed' }, 6000);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  /**
+   * Sends only the verdict again. `force` is safe here: the user saw the original failure and is
+   * explicitly retrying, and a head change keeps its own conflict handling on the normal send path.
+   */
+  const retryVerdict = async () => {
+    if (store === null || verdictFailure === null) {
+      return;
+    }
+    setSending(true);
+    try {
+      const response = await apiSend(
+        'POST',
+        `/api/repos/${repoId}/pulls/${number}/send`,
+        { action: verdictFailure.action, summary: store.document.summary, force: true },
+        SendResponseSchema,
+      );
+      store.applyServerDocument(response.document);
+      void open.reload();
+      setVerdictFailure((current) => nextVerdictFailure(current, response.approval));
+      if (response.approval?.ok === true && response.approval.action === 'approve') {
+        setApproved(true);
+      }
+      showToast(
+        {
+          message:
+            response.approval?.ok === true
+              ? `${verdictLabel(verdictFailure.action)} sent`
+              : `${verdictLabel(verdictFailure.action)} failed again`,
+        },
+        6000,
+      );
     } catch (reason) {
       showToast({ message: reason instanceof Error ? reason.message : 'Retry failed' }, 6000);
     } finally {
@@ -334,6 +411,19 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
             </ul>
           )}
         </section>
+      )}
+
+      {verdictFailure !== null && (
+        <div className={styles.verdictNotice} role="alert">
+          <span>
+            <strong>{verdictFailureTitle(verdictFailure)}:</strong> {verdictFailure.error}
+          </span>
+          <span className={page.spacer} />
+          <Button onClick={() => void retryVerdict()} disabled={sending}>
+            {retryVerdictLabel(verdictFailure.action)}
+          </Button>
+          <IconButton icon="close" label="Dismiss the verdict error" onClick={() => setVerdictFailure(null)} />
+        </div>
       )}
 
       {data !== undefined && pullRequestChanged(data.pullRequest.headSha, status.data) && (
@@ -509,6 +599,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
           }}
         />
       )}
+      <ShortcutsDialog shortcuts={tab === 'files' ? FILE_SHORTCUTS : CONVERSATION_SHORTCUTS} />
       <ToastHost />
     </div>
   );
