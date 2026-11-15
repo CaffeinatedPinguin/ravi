@@ -40,8 +40,15 @@
 }
 
 .repoSelect {
+  width: 180px;
   max-width: 220px;
   font-weight: 500;
+}
+
+/* A repository name is not a git ref: keep the top bar calm, not monospace. */
+.repoSelect input {
+  width: 100%;
+  font-family: var(--font-ui);
 }
 
 .branch {

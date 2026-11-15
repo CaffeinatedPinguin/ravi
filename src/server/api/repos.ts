@@ -14,6 +14,7 @@ import { setEnvVar } from '../forges/env-write.ts';
 import { forgeFor, hostForName, maskToken, repoTokenEnv, resolveToken } from '../forges/registry.ts';
 import { testGitConnection } from '../git/clone.ts';
 import { readRepoInfo } from '../git/repo.ts';
+import { readRefs } from '../git/refs.ts';
 import { HttpError } from '../http/router.ts';
 import type { Router } from '../http/router.ts';
 import { addRepo, getRepo, listRepos, removeRepo, scanForRepos, setRepoConnection } from '../store/repos.ts';
@@ -31,6 +32,9 @@ export function registerRepoRoutes(router: Router, { paths }: AppContext): void 
   router.post('/api/repos/scan', async ({ body }) => scanForRepos(resolve((await body(ScanRequestSchema)).path)));
 
   router.get('/api/repos/:id/info', async ({ params }) => readRepoInfo((await getRepo(paths, params.id ?? '')).path));
+
+  // Feeds the base branch and range pickers; the id is looked up, never used as a path.
+  router.get('/api/repos/:id/refs', async ({ params }) => readRefs((await getRepo(paths, params.id ?? '')).path));
 
   // Connection step of the settings wizard: transport and the token, which never comes back.
   router.put('/api/repos/:id/connection', async ({ params, body }): Promise<RepoView> => {
