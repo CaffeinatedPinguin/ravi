@@ -12,18 +12,21 @@ plus one registry entry.
 | `src/server/forges/forge.ts` | The `Forge` interface, `ForgeHost` and the factory type |
 | `src/server/forges/registry.ts` | Known hosts, auth headers, `forgeFor` facade and `forgeStatus` |
 | `src/server/forges/env.ts` | Token file reader with cache and explicit reload |
+| `src/server/forges/env-write.ts` | The only writer of `.env`: line editor, atomic 0600 replace, cache reload |
 | `src/server/forges/http.ts` | Authenticated JSON client: timeouts, no redirects, pagination, ETag cache, `ForgeError` |
 | `src/server/forges/remote.ts` | `origin` URL parsing and `detectRepoRef` |
-| `src/server/forges/github.ts`, `gitlab.ts` | One strategy per host (URLs and capabilities are final; network methods follow) |
+| `src/server/forges/github.ts`, `gitlab.ts` | One strategy per host: URLs, capabilities and network calls |
 | `src/server/forges/testing.ts` | `fakeFetch`: route-keyed fake `fetch` that records calls |
 | `src/server/forges/contract.ts` | `describeForgeContract`: the suite every strategy must pass |
 | `src/server/api/forges.ts` | `GET /api/forges`, `POST /api/forges/reload`, `GET /api/repos/:id/remote` |
 
 ## Rules
 
-- Tokens come only from `~/.revu/.env`; `process.env` is never read. A missing file means no tokens.
+- Tokens live only in `~/.revu/.env`; Settings → Accounts and the repository connection step write
+  them there, `process.env` is never read, and a missing file means no tokens.
 - A token is attached by the registry's auth callback on every request and is never stored on the
-  strategy object, logged, returned by a route or serialised into `ForgeStatus`.
+  strategy object, logged, returned by a route or serialised into `ForgeStatus`. Routes expose only
+  `hasToken` and a four-character `tokenHint`.
 - The HTTP client refuses redirects (`redirect: 'manual'`) because a redirect could carry the token
   to another host, rejects absolute and `..` paths, and follows `Link: rel="next"` only on the API
   origin. Every request has a 20 s timeout.
