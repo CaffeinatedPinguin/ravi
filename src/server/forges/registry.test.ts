@@ -57,6 +57,32 @@ describe('forgeFor', () => {
     expect(forge.capabilities.requestChanges).toBe(true);
   });
 
+  it('uses the repository token before the host token', async () => {
+    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-111\nREVU_TOKEN_A1B2C3D4E5F6=repo-token-222\n');
+    reloadForgeTokens();
+    const fake = fakeFetch({ 'GET https://api.github.com/user': { json: { login: 'alice' } } });
+
+    const forge = await forgeFor(paths, github, { repoId: 'a1b2c3d4e5f6', fetchImpl: fake });
+    await expect(forge.currentUser()).resolves.toBe('alice');
+
+    expect(fake.calls[0]?.headers.authorization).toBe('Bearer repo-token-222');
+  });
+
+  it('uses the host token when the repository is configured with host scope', async () => {
+    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-111\nREVU_TOKEN_A1B2C3D4E5F6=repo-token-222\n');
+    reloadForgeTokens();
+    const fake = fakeFetch({ 'GET https://api.github.com/user': { json: { login: 'alice' } } });
+
+    const forge = await forgeFor(paths, github, {
+      repoId: 'a1b2c3d4e5f6',
+      tokenScope: 'host',
+      fetchImpl: fake,
+    });
+    await expect(forge.currentUser()).resolves.toBe('alice');
+
+    expect(fake.calls[0]?.headers.authorization).toBe('Bearer host-token-111');
+  });
+
   it('wires uploads and image reads into the GitLab strategy', async () => {
     writeFileSync(paths.envFile, 'GITLAB_TOKEN=test-token-456\n');
     reloadForgeTokens();
@@ -142,8 +168,11 @@ describe('forgeStatus', () => {
 
     const statuses = await forgeStatus(paths);
     expect(statuses).toHaveLength(2);
-    expect(statuses.find((status) => status.host === 'github.com')?.hasToken).toBe(true);
+    const github = statuses.find((status) => status.host === 'github.com');
+    expect(github?.hasToken).toBe(true);
+    expect(github?.tokenHint).toBe('••••-123');
     expect(statuses.find((status) => status.host === 'gitlab.com')?.hasToken).toBe(false);
+    expect(statuses.find((status) => status.host === 'gitlab.com')?.tokenHint).toBeNull();
     expect(JSON.stringify(statuses)).not.toContain('test-token-123');
   });
 

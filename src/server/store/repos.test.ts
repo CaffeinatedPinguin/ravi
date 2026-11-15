@@ -21,6 +21,6 @@ describe('listRepos', () => {
 
     const [repo] = await listRepos(paths);
 
-    expect(repo).toMatchObject({ kind: 'local', remote: null });
+    expect(repo).toMatchObject({ kind: 'local', remote: null, transport: 'https', tokenScope: 'repo' });
   });
 });

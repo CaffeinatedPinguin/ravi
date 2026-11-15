@@ -11,7 +11,7 @@ import { resolvePaths } from '../paths.ts';
 import type { Paths } from '../paths.ts';
 import { writeJsonFile } from '../store/json-file.ts';
 import { listRepos } from '../store/repos.ts';
-import { cloneRemote, deleteClone, fetchPullRequest, listClones, pruneClones } from './clone.ts';
+import { cloneEnv, cloneRemote, deleteClone, fetchPullRequest, httpsCloneUrl, listClones, pruneClones, sshCloneUrl } from './clone.ts';
 import { diffSummary } from './diff.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -131,6 +131,51 @@ describe('cloneRemote and fetchPullRequest', () => {
     });
     expect(output).toContain('http.https://github.com/.extraheader');
     expect(output).toContain(`Authorization: Basic ${expected}`);
+  });
+
+  it('prefers the repository token over the host token for HTTPS', async () => {
+    const paths = makePaths();
+    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-123\nREVU_TOKEN_A1B2C3D4E5F6=repo-token-456\n');
+    reloadForgeTokens();
+    const ref: RepoRef = { host: 'github.com', project: 'acme/api' };
+
+    const repository = await cloneEnv(paths, ref, { transport: 'https', repoId: 'a1b2c3d4e5f6' });
+    const repositoryHeader = Buffer.from('x-access-token:repo-token-456', 'utf8').toString('base64');
+    expect(repository.GIT_CONFIG_VALUE_0).toBe(`Authorization: Basic ${repositoryHeader}`);
+
+    // A repository token that is not stored falls back to the host token.
+    const fallback = await cloneEnv(paths, ref, { transport: 'https', repoId: 'ffffffffffff' });
+    const hostHeader = Buffer.from('x-access-token:host-token-123', 'utf8').toString('base64');
+    expect(fallback.GIT_CONFIG_VALUE_0).toBe(`Authorization: Basic ${hostHeader}`);
+  });
+
+  it('uses the SSH URL and injects neither a token nor GIT_CONFIG_* for an SSH clone', async () => {
+    const paths = makePaths();
+    const token = 'fake-token-ssh-123';
+    writeFileSync(paths.envFile, `GITHUB_TOKEN=${token}\n`);
+    reloadForgeTokens();
+    const ref: RepoRef = { host: 'github.com', project: 'acme/api' };
+
+    const observed: Array<{ args: string[]; env: NodeJS.ProcessEnv }> = [];
+    await cloneRemote(paths, ref, {
+      cloneUrl: pathToFileURL(source).href,
+      transport: 'ssh',
+      onSpawn: (info) => observed.push(info),
+    });
+
+    const spawn = observed[0];
+    expect(spawn).toBeDefined();
+    if (spawn === undefined) {
+      throw new Error('The clone child process was not observed');
+    }
+    expect(spawn.env.GIT_CONFIG_COUNT).toBeUndefined();
+    expect(spawn.env.GIT_CONFIG_KEY_0).toBeUndefined();
+    for (const value of Object.values(spawn.env)) {
+      expect(value ?? '').not.toContain(token);
+    }
+
+    expect(sshCloneUrl(ref)).toBe('git@github.com:acme/api.git');
+    expect(httpsCloneUrl(ref)).toBe('https://github.com/acme/api.git');
   });
 });
 

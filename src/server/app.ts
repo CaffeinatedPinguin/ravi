@@ -5,6 +5,7 @@ import type { Health } from '../shared/api.ts';
 import { registerCloneRoutes } from './api/clones.ts';
 import { registerDiffRoutes } from './api/diff.ts';
 import { registerForgeRoutes } from './api/forges.ts';
+import { registerFsRoutes } from './api/fs.ts';
 import { registerImageProxyRoutes } from './api/image-proxy.ts';
 import { registerNotificationRoutes } from './api/notifications.ts';
 import { registerPullRoutes } from './api/pulls.ts';
@@ -29,6 +30,7 @@ export function createRouter(context: AppContext): Router {
   registerRepoRoutes(router, context);
   registerCloneRoutes(router, context);
   registerForgeRoutes(router, context);
+  registerFsRoutes(router);
   registerImageProxyRoutes(router, context);
   registerNotificationRoutes(router, context);
   registerPullRoutes(router, context);
