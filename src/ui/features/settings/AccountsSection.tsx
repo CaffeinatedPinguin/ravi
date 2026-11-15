@@ -33,8 +33,8 @@ export function AccountsSettingsSection() {
   return (
     <Section title="Accounts">
       <p className={styles.hint}>
-        Tokens are written to <code>~/.revu/.env</code> with mode 0600 and never shown again — only the last four
-        characters.
+        Tokens are stored in <code>~/.revu/.env</code> (only readable by you). Set them here under Accounts or per
+        repository; revu never shows them again — only the last four characters.
       </p>
       {(error ?? forges.error) !== null && (
         <p className={styles.fieldError} role="alert">

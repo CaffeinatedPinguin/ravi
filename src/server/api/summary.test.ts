@@ -1,9 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import type { Repo } from '../../shared/api.ts';
+import { createRouter } from '../app.ts';
+import { handleRequest } from '../http/server.ts';
 import { resolvePaths } from '../paths.ts';
 import { writeJsonFile } from '../store/json-file.ts';
 import { repoSummary } from './summary.ts';
@@ -55,6 +58,51 @@ function repo(path: string, kind: Repo['kind'] = 'local'): Repo {
     remote: kind === 'remote' ? { host: 'github.com', project: 'acme/api' } : null,
   };
 }
+
+type Captured = { status: number; body: string };
+
+/** The request path is exercised through the whole router, so a missing registration would be a 404. */
+async function getJson(paths: ReturnType<typeof resolvePaths>, path: string): Promise<Captured> {
+  let status = 0;
+  let body: Buffer = Buffer.alloc(0);
+  const req = { url: path, method: 'GET', headers: { host: '127.0.0.1:4783' } } as unknown as IncomingMessage;
+  const res = {
+    headersSent: false,
+    writeHead(nextStatus: number) {
+      status = nextStatus;
+    },
+    end(chunk?: Buffer | string) {
+      if (chunk !== undefined) {
+        body = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      }
+    },
+  } as unknown as ServerResponse;
+  await handleRequest(req, res, {
+    router: createRouter({ paths }),
+    security: { token: 'test-token', allowedHosts: ['127.0.0.1:4783'], skipSession: true },
+    assets: null,
+  });
+  return { status, body: body.toString('utf8') };
+}
+
+describe('repository summary route', () => {
+  it('answers through createRouter with the repository summary instead of a 404', async () => {
+    const work = temp('summary-route');
+    git(work, ['init', '-q', '-b', 'main']);
+    writeFileSync(join(work, 'a.txt'), 'one\n');
+    git(work, ['add', '.']);
+    git(work, ['commit', '--no-verify', '-q', '-m', 'only commit']);
+
+    const answer = await getJson(await connect(repo(work)), `/api/repos/${REPO_ID}/summary`);
+
+    expect(answer.status).toBe(200);
+    expect(JSON.parse(answer.body)).toMatchObject({
+      branch: 'main',
+      uncommitted: { files: 0 },
+      lastCommit: { subject: 'only commit' },
+    });
+  });
+});
 
 describe('repository summary', () => {
   it('reports the upstream distance, uncommitted counts with untracked files and the last commit', async () => {

@@ -2,11 +2,12 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Repo } from '../../shared/api.ts';
 import type { DraftOperation, PullRequest, ReviewAction, SubmitResult } from '../../shared/forge.ts';
 import type { ReviewComment, ReviewDocument } from '../../shared/review.ts';
 import { resolvePaths } from '../paths.ts';
+import { fakeFetch } from '../forges/testing.ts';
 import { fakeForge } from '../pulls/testing.ts';
 import { writeJsonFile } from '../store/json-file.ts';
 import { readReview, writeReview } from '../review/store.ts';
@@ -14,6 +15,8 @@ import { sendReview } from './send.ts';
 
 const REPO_ID = 'a1b2c3d4';
 const NUMBER = 7;
+const REPO_TOKEN = 'repo-token-222';
+const HOST_TOKEN = 'host-token-111';
 const tempDirs: string[] = [];
 let source = '';
 let baseSha = '';
@@ -75,6 +78,26 @@ function pullRequest(overrides: Partial<PullRequest> = {}): PullRequest {
   };
 }
 
+/** The GitHub REST shape, as the real client receives it before mapping to the shared model. */
+function githubPull(): Record<string, unknown> {
+  return {
+    number: NUMBER,
+    title: 'Change a and add b',
+    user: { login: 'octocat' },
+    state: 'open',
+    draft: false,
+    updated_at: '2026-11-14T10:00:00Z',
+    base: { ref: 'main', sha: baseSha },
+    head: { ref: 'feature', sha: headSha },
+    html_url: 'https://github.com/acme/api/pull/7',
+    merged_at: null,
+    body: 'Please review',
+    comments: 0,
+    review_comments: 0,
+    requested_reviewers: [],
+  };
+}
+
 function comment(overrides: Partial<ReviewComment> & Pick<ReviewComment, 'id' | 'body'>): ReviewComment {
   return {
     parentId: null,
@@ -105,6 +128,10 @@ async function makeRepo(): Promise<{ paths: ReturnType<typeof resolvePaths> }> {
     remote: { host: 'github.com', project: 'acme/api' },
   };
   await writeJsonFile(join(paths.data, 'repos.json'), [repo]);
+  writeFileSync(
+    paths.envFile,
+    `GITHUB_TOKEN=${HOST_TOKEN}\nREVU_TOKEN_${REPO_ID.toUpperCase()}=${REPO_TOKEN}\n`,
+  );
   return { paths };
 }
 
@@ -293,5 +320,31 @@ describe('sendReview', () => {
       'Resource not accessible by integration',
     );
     expect(response.document.action).toBe('approve');
+  });
+
+  it('sends with the repository token, not the host token', async () => {
+    const { paths } = await makeRepo();
+    await writeReview(paths, REPO_ID, reviewDocument({ action: null, summary: null }));
+    const fake = fakeFetch({
+      'GET https://api.github.com/user': { json: { login: 'octocat' } },
+      [`GET https://api.github.com/repos/acme/api/pulls/${NUMBER}`]: { json: githubPull() },
+      [`POST https://api.github.com/repos/acme/api/pulls/${NUMBER}/reviews`]: { json: { id: 900 } },
+    });
+    vi.stubGlobal('fetch', fake);
+    try {
+      const response = await sendReview(paths, REPO_ID, NUMBER, {
+        action: null,
+        summary: null,
+        force: false,
+      });
+      expect(response.results.map((result) => result.ok)).toEqual([true, true]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(fake.calls.length).toBeGreaterThan(0);
+    for (const call of fake.calls) {
+      expect(call.headers.authorization).toBe(`Bearer ${REPO_TOKEN}`);
+    }
   });
 });

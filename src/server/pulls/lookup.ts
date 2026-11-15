@@ -20,7 +20,9 @@ export function requireRemote(repo: Repo): RepoRef {
 export type ForgeLookup = (repo: Repo) => Promise<Forge>;
 
 export function defaultForgeLookup(paths: Paths): ForgeLookup {
-  return async (repo) => forgeFor(paths, requireRemote(repo));
+  // The repository id (and its token scope) selects `REVU_TOKEN_<REPOID>` before the host token.
+  return async (repo) =>
+    forgeFor(paths, requireRemote(repo), { repoId: repo.id, tokenScope: repo.tokenScope });
 }
 
 /** Route parameters are strings; only a positive integer may reach the forge or git. */

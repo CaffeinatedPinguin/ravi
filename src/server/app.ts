@@ -12,6 +12,7 @@ import { registerPullRoutes } from './api/pulls.ts';
 import { registerRepoRoutes } from './api/repos.ts';
 import { registerReviewRoutes } from './api/review.ts';
 import { registerSendRoutes } from './api/send.ts';
+import { registerSummaryRoutes } from './api/summary.ts';
 import { Router } from './http/router.ts';
 import type { Paths } from './paths.ts';
 import { readSettings, writeSettings } from './store/settings.ts';
@@ -34,6 +35,7 @@ export function createRouter(context: AppContext): Router {
   registerImageProxyRoutes(router, context);
   registerNotificationRoutes(router, context);
   registerPullRoutes(router, context);
+  registerSummaryRoutes(router, context);
   registerDiffRoutes(router, context);
   registerReviewRoutes(router, context);
   registerSendRoutes(router, context);

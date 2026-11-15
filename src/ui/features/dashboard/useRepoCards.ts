@@ -1,9 +1,8 @@
 /** Loads the dashboard facts per repository: summary, pull requests, and one visible error/retry. */
 import { useCallback, useEffect, useState } from 'react';
-import { DiffSummarySchema, RepoInfoSchema } from '../../../shared/api.ts';
 import type { Repo } from '../../../shared/api.ts';
 import type { PullRequestSummary } from '../../../shared/forge.ts';
-import { apiGet, apiSend, ApiError } from '../../app/api.ts';
+import { apiGet } from '../../app/api.ts';
 import { PullRequestListSchema } from '../pulls/schemas.ts';
 import { mapLimit } from './dashboard.ts';
 import { RepoSummarySchema } from './schema.ts';
@@ -68,35 +67,5 @@ export function useRepoCards(
 }
 
 async function loadSummary(repoId: string, signal: AbortSignal): Promise<RepoSummary> {
-  try {
-    return await apiGet(`/api/repos/${repoId}/summary`, RepoSummarySchema, signal);
-  } catch (reason) {
-    // `app.ts` belongs to another task in this wave; until it registers the summary route, the
-    // dashboard derives the same local facts from the diff and info endpoints.
-    if (!(reason instanceof ApiError) || reason.status !== 404) {
-      throw reason;
-    }
-  }
-
-  const [info, diff] = await Promise.all([
-    apiGet(`/api/repos/${repoId}/info`, RepoInfoSchema, signal),
-    apiSend(
-      'POST',
-      `/api/repos/${repoId}/diff`,
-      { target: { kind: 'uncommitted' }, ignoreWhitespace: false, includeUntracked: true },
-      DiffSummarySchema,
-    ),
-  ]);
-  return {
-    branch: info.branch,
-    ahead: null,
-    behind: null,
-    uncommitted: {
-      files: diff.files.length,
-      additions: diff.additions,
-      deletions: diff.deletions,
-      untracked: diff.files.filter((file) => file.status === 'untracked').length,
-    },
-    lastCommit: null,
-  };
+  return apiGet(`/api/repos/${repoId}/summary`, RepoSummarySchema, signal);
 }

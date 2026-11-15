@@ -84,6 +84,25 @@ export function DiffView({ session, mode, expandStep, repoPath, store, onActiveF
       anchor.current = { fileIndex, offset: element.scrollTop - fileOffset(fileIndex) };
     }
   };
+
+  // `measure()` forgets the height of every mounted row. Re-measure them right after: an estimate
+  // (thread rows start at 120px) would otherwise stay in the offsets and leave a gap below the row
+  // until it scrolls out of view and mounts again. `resizeItem` is used instead of the observer path
+  // so a scroll that is still being classified cannot skip the correction.
+  const remeasureMountedRows = useCallback((): void => {
+    const element = scrollRef.current;
+    if (element === null) {
+      return;
+    }
+    for (const node of element.querySelectorAll<HTMLElement>('[data-index]')) {
+      const index = Number(node.dataset.index);
+      const rowRef = Number.isInteger(index) ? session.rowAt(index) : null;
+      if (rowRef && isMeasuredRow(rowRef.row)) {
+        virtualizer.resizeItem(index, node.offsetHeight);
+      }
+    }
+  }, [session, virtualizer]);
+
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element || appliedVersion.current === version) {
@@ -91,11 +110,21 @@ export function DiffView({ session, mode, expandStep, repoPath, store, onActiveF
     }
     appliedVersion.current = version;
     virtualizer.measure();
+    remeasureMountedRows();
+    // Rows mounted by this commit may not be in the DOM yet when the effect runs, and the
+    // virtualizer's observer skips samples taken while a scroll is still being classified.
+    // A frame and a short timer catch both cases; the timer covers a slow first paint.
+    const frame = window.requestAnimationFrame(remeasureMountedRows);
+    const timer = window.setTimeout(remeasureMountedRows, 100);
     const target = fileOffset(anchor.current.fileIndex) + anchor.current.offset;
     if (Math.abs(target - element.scrollTop) > 1) {
       element.scrollTop = target;
     }
-  }, [session, version, virtualizer, fileOffset]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [session, version, virtualizer, fileOffset, remeasureMountedRows]);
 
   const items = virtualizer.getVirtualItems();
   const scrollTop = virtualizer.scrollOffset ?? 0;

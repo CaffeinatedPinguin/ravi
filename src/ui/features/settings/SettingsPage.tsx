@@ -7,6 +7,7 @@ import { MAX_FILTER_ENTRIES } from '../../../shared/notify.ts';
 import { apiSend } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
+import { Brand } from '../../components/Brand.tsx';
 import { Button, Segmented, Toggle } from '../../components/controls.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { AccountsSettingsSection } from './AccountsSection.tsx';
@@ -47,17 +48,7 @@ export function SettingsPage() {
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
-        <a
-          className={styles.brand}
-          href="/"
-          onClick={(event) => {
-            event.preventDefault();
-            navigate('/');
-          }}
-        >
-          revu
-        </a>
-        <span className={styles.topTitle}>Settings</span>
+        <Brand />
         <span className={styles.spacer} />
         <TopBarActions />
       </header>

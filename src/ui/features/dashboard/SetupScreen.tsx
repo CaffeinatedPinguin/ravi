@@ -33,7 +33,8 @@ export function SetupScreen({ notice }: { notice: string | null }) {
             <Button onClick={() => navigate('/settings#accounts')}>How tokens work</Button>
           </div>
           <p className={styles.setupHint}>
-            Tokens live in <code>~/.revu/.env</code>; revu never writes them and never sends them to the page.
+            Tokens are stored in <code>~/.revu/.env</code> (only readable by you). Set them in Settings → Accounts or
+            per repository; revu never shows them again.
           </p>
         </div>
       </main>
