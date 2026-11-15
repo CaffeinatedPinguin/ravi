@@ -11,6 +11,7 @@ import { useAsync } from '../../app/useAsync.ts';
 import { Brand } from '../../components/Brand.tsx';
 import { Combobox } from '../../components/Combobox.tsx';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
+import { Menu } from '../../components/Menu.tsx';
 import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
 import { showToast, ToastHost } from '../../components/Toast.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
@@ -26,11 +27,12 @@ import { FileUrlTemplateSchema } from '../pulls/schemas.ts';
 import { RepoNav } from '../repos/RepoNav.tsx';
 import { DiffMessage, DiffPane } from './DiffPane.tsx';
 import { DiffStat } from './DiffStat.tsx';
+import { SaveStatus } from './SaveStatus.tsx';
 import styles from './ReviewPage.module.css';
 import { LOCAL_REVIEW_SHORTCUTS } from './shortcuts.ts';
 import { TargetPicker } from './TargetPicker.tsx';
 import { decodeTarget, encodeTarget, showsWorkingTree } from './target.ts';
-import { formatUpdatedAgo, useAutoRefresh } from './useAutoRefresh.ts';
+import { formatRefreshedAgo, useAutoRefresh } from './useAutoRefresh.ts';
 import { useReviewStore } from './useReviewStore.ts';
 
 type ImportSeed = { markdown: string; fileName: string };
@@ -235,6 +237,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
     const timer = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(timer);
   }, []);
+  const refreshedAgo = updatedAt === null ? null : formatRefreshedAgo(now, updatedAt);
 
   // While dragging, the grid follows a local width; it is written to settings only on release.
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
@@ -355,9 +358,6 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           onChange={(linkMode) => update({ linkMode })}
         />
         <IconButton icon="collapse" label="Collapse all files" onClick={() => session?.setAllCollapsed(true)} />
-        <span className={styles.updated} aria-live="polite">
-          {updatedAt !== null && formatUpdatedAgo(now, updatedAt)}
-        </span>
         {store && (
           <Button
             aria-expanded={notesOpen}
@@ -369,22 +369,20 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           </Button>
         )}
         {store && (
-          <div className={styles.transfer} role="group" aria-label="Review Markdown">
-            <Button icon="upload" title="Import review Markdown (Shift+I)" onClick={() => openImport()}>
-              Import
-            </Button>
-            <Button icon="copy" title="Copy review Markdown for AI (Shift+C)" disabled={!hasContent} onClick={() => void copyReview()}>
-              Copy
-            </Button>
-            <Button icon="download" title="Save review Markdown (Shift+S)" disabled={!hasContent} onClick={() => void saveReview()}>
-              Save
-            </Button>
-          </div>
+          <Menu
+            label="Export"
+            title="Export the review Markdown (Shift+C, Shift+S, Shift+I)"
+            items={[
+              { label: 'Copy for AI', disabled: !hasContent, onSelect: () => void copyReview() },
+              { label: 'Save as file', disabled: !hasContent, onSelect: () => void saveReview() },
+              { label: 'Import…', onSelect: () => openImport() },
+            ]}
+          />
         )}
-        {store && <SaveStatus status={store.saveStatus} onRetry={() => void store.retry()} />}
+        {store && <SaveStatus status={store.saveStatus} refreshedAgo={refreshedAgo} onRetry={() => void store.retry()} />}
         <IconButton
           icon="refresh"
-          label="Reload changes (r)"
+          label={refreshedAgo === null ? 'Reload changes (r)' : `Reload changes, last refreshed ${refreshedAgo}`}
           aria-busy={summary.loading}
           className={summary.loading ? styles.refreshing : undefined}
           onClick={summary.reload}
@@ -452,17 +450,3 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   );
 }
 
-function SaveStatus({ status, onRetry }: { status: 'saved' | 'saving' | 'error'; onRetry: () => void }) {
-  if (status === 'error') {
-    return (
-      <button type="button" className={styles.saveError} onClick={onRetry}>
-        Save failed — retry
-      </button>
-    );
-  }
-  return (
-    <span className={styles.saveStatus} data-status={status} aria-live="polite">
-      {status === 'saving' ? 'Saving…' : 'Saved'}
-    </span>
-  );
-}

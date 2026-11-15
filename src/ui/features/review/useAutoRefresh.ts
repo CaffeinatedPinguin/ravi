@@ -12,16 +12,19 @@ export function shouldReloadOnFocus(loadedFingerprint: string, currentFingerprin
   return loadedFingerprint !== currentFingerprint;
 }
 
-/** Label for the "last loaded" indicator; pure so its thresholds can be tested. */
-export function formatUpdatedAgo(now: number, updatedAt: number): string {
+/**
+ * Age of the last refresh, used in the save-status tooltip and the reload button's aria-label.
+ * Pure so the thresholds can be tested; a clock that moves backwards reads "just now".
+ */
+export function formatRefreshedAgo(now: number, updatedAt: number): string {
   const seconds = Math.max(0, Math.floor((now - updatedAt) / 1000));
   if (seconds < 5) {
-    return 'Updated just now';
+    return 'just now';
   }
   if (seconds < 60) {
-    return `Updated ${seconds} s ago`;
+    return `${seconds} s ago`;
   }
-  return `Updated ${Math.floor(seconds / 60)} min ago`;
+  return `${Math.floor(seconds / 60)} min ago`;
 }
 
 type AutoRefreshOptions = {

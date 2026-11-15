@@ -96,7 +96,7 @@ test('split view, range comment lifecycle and Markdown round trip', async ({ pag
 
   // Copy exports Markdown with the self-describing header and `path:line` sections.
   await page.bringToFront();
-  await page.getByRole('group', { name: 'Review Markdown' }).getByRole('button', { name: 'Copy' }).click();
+  await exportAction(page, 'Copy for AI');
   await expect(page.getByRole('status').filter({ hasText: 'Copied 2 comments for AI' })).toBeVisible();
   const markdown = await page.evaluate<string>('navigator.clipboard.readText()');
   expect(markdown).toContain('# Code review: local');
@@ -113,7 +113,7 @@ test('split view, range comment lifecycle and Markdown round trip', async ({ pag
     .join(IMPORTED_BODY)
     .split(REPLY_BODY)
     .join(IMPORTED_REPLY_BODY);
-  await page.getByRole('group', { name: 'Review Markdown' }).getByRole('button', { name: 'Import' }).click();
+  await exportAction(page, 'Import…');
   const dialog = page.getByRole('dialog', { name: 'Import review' });
   await expect(dialog).toBeVisible();
   await page.getByRole('textbox', { name: 'Review Markdown to import' }).fill(importedText);
@@ -135,6 +135,12 @@ async function switchLayout(page: Page, name: 'Split' | 'Unified'): Promise<void
   );
   await page.getByRole('radio', { name }).click();
   await saved;
+}
+
+/** The Markdown transfer buttons now live in the toolbar's Export menu. */
+async function exportAction(page: Page, name: 'Copy for AI' | 'Import…' | 'Save as file'): Promise<void> {
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
 }
 
 /**

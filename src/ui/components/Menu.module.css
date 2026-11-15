@@ -1,0 +1,45 @@
+/* Trigger + list keep the toolbar's density: 28 px rows, controls.module.css border and colours. */
+.menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  width: max-content;
+  min-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.item:hover:not(:disabled),
+.item[data-active] {
+  background: var(--bg-hover);
+}
+
+.item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
