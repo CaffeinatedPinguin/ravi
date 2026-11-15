@@ -136,7 +136,8 @@ export function fromMarkdown(text: string): ImportResult {
         side: lastComment.side,
         line: lastComment.line,
         startLine: lastComment.startLine,
-        body: parseBody(section.lines),
+        // A hand-written or older export may quote the code context above the reply; it is context.
+        body: parseContent(section.lines).body,
         author: reply.author,
       });
       continue;
@@ -242,7 +243,8 @@ function orderedComments(comments: ReviewComment[]): Array<{ comment: ReviewComm
 
 function sectionLines(comment: ReviewComment, reply: boolean): string[] {
   const heading = reply ? `### reply${suffix(comment)}` : `## ${location(comment)}${suffix(comment)}`;
-  return [heading, ...codeLines(comment), ...quoteBody(comment.body)];
+  // The quoted code belongs to the comment's location, not to the conversation; a reply has none.
+  return [heading, ...(reply ? [] : codeLines(comment)), ...quoteBody(comment.body)];
 }
 
 function location(comment: ReviewComment): string {

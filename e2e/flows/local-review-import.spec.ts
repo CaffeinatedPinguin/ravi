@@ -1,9 +1,8 @@
 /**
  * Regression: importing an *unchanged* export must skip every comment.
  *
- * A reply section carries the same quoted code fence as its root, but the importer parses replies
- * as plain bodies, so the fence ends up in the reply text and an untouched export is reported as
- * edited. The flow is kept as a fixme until the server side is fixed (see .task/report.md).
+ * A reply section shares its root's location but must not carry a quoted code fence; the importer
+ * also tolerates a fence above a reply's quoted body so older hand-written reviews stay valid.
  */
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -16,8 +15,8 @@ const REPLY_BODY = 'Import round trip reply';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
-test.fixme(
-  "APP BUG: an unchanged reply is edited on import because its exported code fence is parsed into its body",
+test(
+  "an unchanged reply is skipped on import, not edited by its quoted code context",
   async ({ page }) => {
     const fixture = createFixture();
     const forge = await startFakeForge();

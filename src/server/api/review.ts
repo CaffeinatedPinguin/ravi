@@ -88,12 +88,17 @@ async function exportMarkdown(
   diffTarget: DiffTarget,
   document: ReviewDocument,
 ): Promise<string> {
+  // Only a real root (a known parent) gets quoted code; an orphan is written as a root and keeps it.
+  const known = new Set(document.comments.map((comment) => comment.id));
   const comments = await Promise.all(
-    document.comments.map(async (comment): Promise<ReviewComment> => ({
-      ...comment,
-      codeContext: await codeContextFor(repoRoot, diffTarget, comment),
-      body: replaceAssetLinks(comment.body, paths),
-    })),
+    document.comments.map(async (comment): Promise<ReviewComment> => {
+      const reply = comment.parentId !== null && known.has(comment.parentId);
+      return {
+        ...comment,
+        codeContext: reply ? null : await codeContextFor(repoRoot, diffTarget, comment),
+        body: replaceAssetLinks(comment.body, paths),
+      };
+    }),
   );
   return toMarkdown({ ...document, comments });
 }
