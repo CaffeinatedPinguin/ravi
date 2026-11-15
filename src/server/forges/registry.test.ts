@@ -9,8 +9,8 @@ import { reloadForgeTokens } from './env.ts';
 import { HOSTS, forgeFor, forgeStatus } from './registry.ts';
 import { fakeFetch } from './testing.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-forge-registry-'));
-const paths = resolvePaths({ REVU_HOME: home });
+const home = mkdtempSync(join(tmpdir(), 'ravi-forge-registry-'));
+const paths = resolvePaths({ RAVI_HOME: home });
 const github = { host: 'github.com', project: 'acme/api' };
 
 beforeEach(() => {
@@ -44,7 +44,7 @@ describe('forgeFor', () => {
     expect(error).toBeInstanceOf(HttpError);
     const httpError = error as HttpError;
     expect(httpError.status).toBe(401);
-    expect(httpError.message).toBe('No token for github.com: add GITHUB_TOKEN to ~/.revu/.env');
+    expect(httpError.message).toBe('No token for github.com: add GITHUB_TOKEN to ~/.ravi/.env');
   });
 
   it('builds the strategy for a registered host when the token exists', async () => {
@@ -58,7 +58,7 @@ describe('forgeFor', () => {
   });
 
   it('uses the repository token before the host token', async () => {
-    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-111\nREVU_TOKEN_A1B2C3D4E5F6=repo-token-222\n');
+    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-111\nRAVI_TOKEN_A1B2C3D4E5F6=repo-token-222\n');
     reloadForgeTokens();
     const fake = fakeFetch({ 'GET https://api.github.com/user': { json: { login: 'alice' } } });
 
@@ -69,7 +69,7 @@ describe('forgeFor', () => {
   });
 
   it('uses the host token when the repository is configured with host scope', async () => {
-    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-111\nREVU_TOKEN_A1B2C3D4E5F6=repo-token-222\n');
+    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-111\nRAVI_TOKEN_A1B2C3D4E5F6=repo-token-222\n');
     reloadForgeTokens();
     const fake = fakeFetch({ 'GET https://api.github.com/user': { json: { login: 'alice' } } });
 

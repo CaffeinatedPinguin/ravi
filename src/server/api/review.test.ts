@@ -11,9 +11,9 @@ import { resolvePaths } from '../paths.ts';
 import { writeJsonFile } from '../store/json-file.ts';
 import { registerReviewRoutes } from './review.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-review-api-'));
-const paths = resolvePaths({ REVU_HOME: home });
-const repo = mkdtempSync(join(tmpdir(), 'revu-review-repo-'));
+const home = mkdtempSync(join(tmpdir(), 'ravi-review-api-'));
+const paths = resolvePaths({ RAVI_HOME: home });
+const repo = mkdtempSync(join(tmpdir(), 'ravi-review-repo-'));
 const REPO_ID = 'a1b2c3d4';
 
 afterAll(() => {
@@ -25,8 +25,8 @@ function git(args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,

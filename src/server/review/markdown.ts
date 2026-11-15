@@ -1,7 +1,7 @@
 /**
- * Markdown v1, the exchange format between revu and an AI (or a human).
+ * Markdown v1, the exchange format between ravi and an AI (or a human).
  *
- * The whole point is a text that explains itself: an agent that has never seen revu must be able to
+ * The whole point is a text that explains itself: an agent that has never seen ravi must be able to
  * read a review and add a comment in the same shape. That is why the header contains the rules, why
  * every comment body line is quoted (so arbitrary Markdown cannot accidentally start a section) and
  * why comments and replies are plain `##` / `###` headings.
@@ -182,7 +182,7 @@ function title(target: ReviewTarget): string {
 }
 
 function headerLine(doc: ReviewDocument): string {
-  const parts = ['revu-review v1'];
+  const parts = ['ravi-review v1'];
   if (doc.baseSha !== null && doc.baseSha !== '') {
     parts.push(`base ${shortSha(doc.baseSha)}`);
   }
@@ -350,7 +350,7 @@ function collectSections(lines: string[]): { sections: RawSection[]; header: Hea
     if (current === null && /^#{1,6} Code review:/.test(start)) {
       continue;
     }
-    if (current === null && start.startsWith('revu-review ')) {
+    if (current === null && start.startsWith('ravi-review ')) {
       parseHeaderLine(start, header);
       continue;
     }

@@ -11,7 +11,7 @@ import type { Page } from '@playwright/test';
 const THEMES = ['light', 'dark'] as const;
 type Theme = (typeof THEMES)[number];
 
-const directory = (): string => resolve(process.env.REVU_E2E_SCREENS ?? '.e2e-out/screens');
+const directory = (): string => resolve(process.env.RAVI_E2E_SCREENS ?? '.e2e-out/screens');
 
 export async function shot(page: Page, baseUrl: string, name: string): Promise<void> {
   const target = directory();
@@ -30,7 +30,7 @@ async function saveTheme(page: Page, baseUrl: string, theme: Theme): Promise<voi
   const settings = (await (await page.request.get(`${baseUrl}/api/settings`)).json()) as Record<string, unknown>;
   const response = await page.request.put(`${baseUrl}/api/settings`, {
     data: { ...settings, theme },
-    headers: { 'x-revu': '1' },
+    headers: { 'x-ravi': '1' },
   });
   if (!response.ok()) {
     throw new Error(`Cannot save the ${theme} theme: HTTP ${response.status()}`);

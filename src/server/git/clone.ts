@@ -2,9 +2,9 @@
  * Bare blobless clones and private pull request refs.
  *
  * A remote repository is kept as a bare, blobless partial clone: history and file names are local,
- * while file contents are downloaded on demand. That keeps `~/.revu/clones` small and makes listing
+ * while file contents are downloaded on demand. That keeps `~/.ravi/clones` small and makes listing
  * a huge repository cheap. Pull request heads never touch the user's branches; they live under the
- * private `refs/revu/pr` namespace.
+ * private `refs/ravi/pr` namespace.
  *
  * Authentication is passed through the environment, never through argv: command-line arguments are
  * visible to other processes on the same machine, so the token must not be one of them.
@@ -54,7 +54,7 @@ export type CloneEnvOptions = {
 
 /**
  * Environment that authenticates git for this repository; an empty object means an anonymous call.
- * SSH deliberately gets nothing: git uses the user's own keys/agent and revu never handles them.
+ * SSH deliberately gets nothing: git uses the user's own keys/agent and ravi never handles them.
  */
 export async function cloneEnv(
   paths: Paths,
@@ -146,7 +146,7 @@ export async function fetchRemote(root: string, env: NodeJS.ProcessEnv = {}): Pr
 
 /**
  * "Test connection" for git: a cheap `ls-remote` with the transport the user chose.
- * A local folder has no repository URL revu owns, so it checks the folder's own `origin`;
+ * A local folder has no repository URL ravi owns, so it checks the folder's own `origin`;
  * a remote clone is checked against the URL matching the selected transport.
  */
 export async function testGitConnection(
@@ -200,7 +200,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, what: string): P
 }
 
 /**
- * Fetches a pull request head into `refs/revu/pr/<n>/head` and returns its commit.
+ * Fetches a pull request head into `refs/ravi/pr/<n>/head` and returns its commit.
  * The head ref and the number are validated before git sees them; `--no-write-fetch-head` keeps the
  * shared FETCH_HEAD untouched, so concurrent reviews cannot confuse each other.
  */
@@ -216,7 +216,7 @@ export async function fetchPullRequest(
     throw new HttpError(400, 'Pull request number must be a positive integer');
   }
   assertRef(forgeRef);
-  const localRef = `refs/revu/pr/${number}/head`;
+  const localRef = `refs/ravi/pr/${number}/head`;
   const filter = isClone ? ['--filter=blob:none'] : [];
   try {
     await git(root, ['fetch', '--no-write-fetch-head', ...filter, 'origin', `+${forgeRef}:${localRef}`], { env });
@@ -229,13 +229,13 @@ export async function fetchPullRequest(
   return resolveCommit(root, localRef);
 }
 
-/** Deletes `refs/revu/pr/*` refs whose number is not in the keep list. */
+/** Deletes `refs/ravi/pr/*` refs whose number is not in the keep list. */
 export async function pruneLocalPrRefs(root: string, keepNumbers: number[]): Promise<number> {
   const keep = new Set(keepNumbers);
-  const output = await gitText(root, ['for-each-ref', '--format=%(refname)', 'refs/revu/pr/']);
+  const output = await gitText(root, ['for-each-ref', '--format=%(refname)', 'refs/ravi/pr/']);
   let deleted = 0;
   for (const ref of output.split('\n').filter(Boolean)) {
-    const match = /^refs\/revu\/pr\/(\d+)\//.exec(ref);
+    const match = /^refs\/ravi\/pr\/(\d+)\//.exec(ref);
     if (match === null || keep.has(Number(match[1]))) {
       continue;
     }

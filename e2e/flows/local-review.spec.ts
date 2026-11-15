@@ -100,7 +100,7 @@ test('split view, range comment lifecycle and Markdown round trip', async ({ pag
   await expect(page.getByRole('status').filter({ hasText: 'Copied 2 comments for AI' })).toBeVisible();
   const markdown = await page.evaluate<string>('navigator.clipboard.readText()');
   expect(markdown).toContain('# Code review: local');
-  expect(markdown).toContain('revu-review v1');
+  expect(markdown).toContain('ravi-review v1');
   expect(markdown).toContain('src/long.ts:4-5 (new)');
   expect(markdown).toContain(EDITED_BODY);
   expect(markdown).toContain(REPLY_BODY);

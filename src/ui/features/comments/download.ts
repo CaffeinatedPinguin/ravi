@@ -7,7 +7,7 @@ const UNSAFE_FILE_CHARS = /[\\/:*?"<>|]/g;
 const CONTROL_CHARS = /[\u0000-\u001f]/g;
 
 export function reviewFileName(repoName: string, encodedTarget: string): string {
-  return `revu-${safePart(repoName)}-${safePart(encodedTarget)}.review.md`;
+  return `ravi-${safePart(repoName)}-${safePart(encodedTarget)}.review.md`;
 }
 
 function safePart(value: string): string {

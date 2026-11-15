@@ -28,7 +28,7 @@ export type PullRequestFixture = Fixture & {
  * The bare remote carries `refs/pull/1/head`, so the server's `git fetch origin pull/1/head` works.
  */
 export function createPullRequestFixture(): PullRequestFixture {
-  const root = mkdtempSync(join(tmpdir(), 'revu-e2e-pr-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-e2e-pr-'));
   const repoPath = join(root, 'pr-repo');
   const home = join(root, 'home');
   const barePath = join(root, 'forge-remote');
@@ -89,7 +89,7 @@ export function routeOriginToLocalBare(repoPath: string, barePath: string): void
 
 /** A fresh home with no repositories; `repoPath` is deliberately not a git repository. */
 export function emptyHomeFixture(): Fixture {
-  const root = mkdtempSync(join(tmpdir(), 'revu-e2e-setup-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-e2e-setup-'));
   const repoPath = join(root, 'not-a-repo');
   const home = join(root, 'home');
   mkdirSync(repoPath);
@@ -133,7 +133,7 @@ export function repoIdFrom(page: Page): string {
  * `data-theme` attribute on `<html>`, so setting it here captures the same real UI.
  */
 export async function shotLive(page: Page, name: string): Promise<void> {
-  const directory = resolve(process.env.REVU_E2E_SCREENS ?? '.e2e-out/screens');
+  const directory = resolve(process.env.RAVI_E2E_SCREENS ?? '.e2e-out/screens');
   mkdirSync(directory, { recursive: true });
   for (const theme of ['light', 'dark'] as const) {
     // The e2e TypeScript project has no DOM lib; a tiny expression keeps the same `data-theme`

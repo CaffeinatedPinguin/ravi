@@ -25,7 +25,7 @@ export type AppContext = {
 
 export function createRouter(context: AppContext): Router {
   const router = new Router();
-  router.get('/api/health', (): Health => ({ app: 'revu', version: VERSION }));
+  router.get('/api/health', (): Health => ({ app: 'ravi', version: VERSION }));
   router.get('/api/settings', () => readSettings(context.paths));
   router.put('/api/settings', async ({ body }) => writeSettings(context.paths, await body(SettingsSchema)));
   registerRepoRoutes(router, context);

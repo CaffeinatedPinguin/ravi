@@ -10,8 +10,8 @@ function git(root: string, args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,
@@ -26,7 +26,7 @@ function sha(root: string, ref: string): string {
 
 /** Two commits touching the same tracked file, so both working-tree and range targets are meaningful. */
 function makeRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), 'revu-fingerprint-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-fingerprint-'));
   git(root, ['init', '-b', 'main']);
   writeFileSync(join(root, 'a.txt'), 'one\n');
   git(root, ['add', '.']);

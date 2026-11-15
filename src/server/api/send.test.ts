@@ -26,8 +26,8 @@ function git(cwd: string, args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,
@@ -37,7 +37,7 @@ function git(cwd: string, args: string[]): string {
 }
 
 beforeAll(() => {
-  source = mkdtempSync(join(tmpdir(), 'revu-send-source-'));
+  source = mkdtempSync(join(tmpdir(), 'ravi-send-source-'));
   tempDirs.push(source);
   git(source, ['init', '-b', 'main']);
   writeFileSync(join(source, 'a.txt'), 'one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\n');
@@ -116,9 +116,9 @@ function comment(overrides: Partial<ReviewComment> & Pick<ReviewComment, 'id' | 
 }
 
 async function makeRepo(): Promise<{ paths: ReturnType<typeof resolvePaths> }> {
-  const home = mkdtempSync(join(tmpdir(), 'revu-send-home-'));
+  const home = mkdtempSync(join(tmpdir(), 'ravi-send-home-'));
   tempDirs.push(home);
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   const repo: Repo = {
     id: REPO_ID,
     path: source,
@@ -130,7 +130,7 @@ async function makeRepo(): Promise<{ paths: ReturnType<typeof resolvePaths> }> {
   await writeJsonFile(join(paths.data, 'repos.json'), [repo]);
   writeFileSync(
     paths.envFile,
-    `GITHUB_TOKEN=${HOST_TOKEN}\nREVU_TOKEN_${REPO_ID.toUpperCase()}=${REPO_TOKEN}\n`,
+    `GITHUB_TOKEN=${HOST_TOKEN}\nRAVI_TOKEN_${REPO_ID.toUpperCase()}=${REPO_TOKEN}\n`,
   );
   return { paths };
 }

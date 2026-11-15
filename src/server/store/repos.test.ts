@@ -6,8 +6,8 @@ import { resolvePaths } from '../paths.ts';
 import { writeJsonFile } from './json-file.ts';
 import { listRepos } from './repos.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-repos-store-'));
-const paths = resolvePaths({ REVU_HOME: home });
+const home = mkdtempSync(join(tmpdir(), 'ravi-repos-store-'));
+const paths = resolvePaths({ RAVI_HOME: home });
 
 afterAll(() => {
   rmSync(home, { recursive: true, force: true });

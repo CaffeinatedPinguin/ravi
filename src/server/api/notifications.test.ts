@@ -20,9 +20,9 @@ afterAll(() => {
 });
 
 function makeRouter(): { paths: Paths; router: Router } {
-  const home = mkdtempSync(join(tmpdir(), 'revu-notifications-api-'));
+  const home = mkdtempSync(join(tmpdir(), 'ravi-notifications-api-'));
   tempDirs.push(home);
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   const router = new Router();
   registerNotificationRoutes(router, { paths });
   return { paths, router };

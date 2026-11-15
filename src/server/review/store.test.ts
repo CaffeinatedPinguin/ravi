@@ -6,8 +6,8 @@ import type { ReviewComment, ReviewDocument, ReviewTarget } from '../../shared/r
 import { resolvePaths } from '../paths.ts';
 import { emptyReview, readReview, reviewKey, writeReview } from './store.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-review-'));
-const paths = resolvePaths({ REVU_HOME: home });
+const home = mkdtempSync(join(tmpdir(), 'ravi-review-'));
+const paths = resolvePaths({ RAVI_HOME: home });
 const REPO_ID = 'a1b2c3d4';
 
 afterAll(() => {

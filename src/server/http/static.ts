@@ -1,5 +1,5 @@
 /**
- * Serves the UI that the build embedded into the single `revu.mjs` file.
+ * Serves the UI that the build embedded into the single `ravi.mjs` file.
  * Assets are stored gzip-compressed and are sent as-is to clients that accept gzip.
  */
 import type { IncomingMessage } from 'node:http';

@@ -26,8 +26,8 @@ function git(cwd: string, args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,
@@ -37,7 +37,7 @@ function git(cwd: string, args: string[]): string {
 }
 
 beforeAll(() => {
-  source = mkdtempSync(join(tmpdir(), 'revu-open-source-'));
+  source = mkdtempSync(join(tmpdir(), 'ravi-open-source-'));
   tempDirs.push(source);
   git(source, ['init', '-b', 'main']);
   writeFileSync(join(source, 'a.txt'), 'one\n');
@@ -65,12 +65,12 @@ afterAll(() => {
 
 /** A local folder cloned from the fixture, connected to the fake forge in `repos.json`. */
 async function makeRepo(): Promise<{ repo: Repo; paths: ReturnType<typeof resolvePaths> }> {
-  const home = mkdtempSync(join(tmpdir(), 'revu-open-home-'));
+  const home = mkdtempSync(join(tmpdir(), 'ravi-open-home-'));
   tempDirs.push(home);
-  const root = mkdtempSync(join(tmpdir(), 'revu-open-clone-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-open-clone-'));
   tempDirs.push(root);
   execFileSync('git', ['clone', pathToFileURL(source).href, root], { cwd: tmpdir(), encoding: 'utf8' });
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   const repo: Repo = {
     id: REPO_ID,
     path: root,

@@ -7,7 +7,7 @@ import type { Notification } from '../../../shared/notify.ts';
 
 /**
  * Items worth a desktop notification: unread, not present in the previous poll and never shown
- * before. `previousIds === null` is the first load after opening revu; existing items are the
+ * before. `previousIds === null` is the first load after opening ravi; existing items are the
  * baseline and must stay quiet.
  */
 export function notificationsToShow(

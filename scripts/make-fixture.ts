@@ -1,6 +1,6 @@
 /**
  * Creates a git repository with a very large uncommitted change, for performance checks:
- *   node scripts/make-fixture.ts [files=5000] [target=.revu-dev/fixture]
+ *   node scripts/make-fixture.ts [files=5000] [target=.ravi-dev/fixture]
  * Every file gets edits in a few places, so the diff has several hunks per file.
  */
 import { execFileSync } from 'node:child_process';
@@ -8,7 +8,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const fileCount = Number(process.argv[2] ?? 5000);
-const target = resolve(process.argv[3] ?? '.revu-dev/fixture');
+const target = resolve(process.argv[3] ?? '.ravi-dev/fixture');
 const LINES_PER_FILE = 120;
 
 const git = (...args: string[]) => execFileSync('git', args, { cwd: target, stdio: 'ignore' });

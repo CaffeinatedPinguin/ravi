@@ -195,7 +195,7 @@ function DashboardView({ repos, notice }: { repos: readonly Repo[]; notice: stri
       </header>
 
       <main className={styles.body}>
-        <h1 className={styles.srOnly}>revu</h1>
+        <h1 className={styles.srOnly}>ravi</h1>
         {(notice ?? starError) !== null && (
           <p className={styles.error} role="alert">
             {starError ?? notice}

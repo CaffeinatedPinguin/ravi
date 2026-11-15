@@ -7,7 +7,7 @@
  * mutable, so a test can simulate the forge receiving two new comments between notification polls.
  *
  * Everything stays on the loopback interface: `startApp` points the GitHub strategy here through
- * `REVU_E2E_FORGE`, and no real forge is ever contacted.
+ * `RAVI_E2E_FORGE`, and no real forge is ever contacted.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';

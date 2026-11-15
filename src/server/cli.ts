@@ -1,5 +1,5 @@
 /**
- * Command line entry: `revu [path] [--port N] [--no-open]`.
+ * Command line entry: `ravi [path] [--port N] [--no-open]`.
  * Starts the local server (or reuses the one already running) and opens the review UI.
  */
 import type { Server } from 'node:http';
@@ -20,9 +20,9 @@ import { readSettings } from './store/settings.ts';
 /** Fixed by default so bookmarks and the session cookie keep working between runs. */
 const DEFAULT_PORT = 4783;
 
-const HELP = `revu ${VERSION} - local code review
+const HELP = `ravi ${VERSION} - local code review
 
-Usage: revu [path] [options]
+Usage: ravi [path] [options]
 
   path           Folder with a git repository to open (default: current folder)
 
@@ -68,7 +68,7 @@ export async function run(argv: string[], options: RunOptions): Promise<void> {
   const running = await findRunningInstance(paths, token);
   if (running) {
     const url = appUrl(`127.0.0.1:${running.port}`, token, folder);
-    console.log(`revu is already running: http://127.0.0.1:${running.port}`);
+    console.log(`ravi is already running: http://127.0.0.1:${running.port}`);
     if (shouldOpen) {
       openBrowser(url);
     }
@@ -95,7 +95,7 @@ export async function run(argv: string[], options: RunOptions): Promise<void> {
   });
 
   const uiHost = options.devUiOrigin ?? `127.0.0.1:${port}`;
-  console.log(`revu ${VERSION} listening on http://127.0.0.1:${port}`);
+  console.log(`ravi ${VERSION} listening on http://127.0.0.1:${port}`);
   console.log(`Open: ${appUrl(uiHost, token, folder)}`);
   if (shouldOpen) {
     openBrowser(appUrl(uiHost, token, folder));
@@ -110,10 +110,10 @@ async function pruneUnusedClones(paths: Paths): Promise<void> {
   try {
     const removed = await pruneClones(paths, (await readSettings(paths)).cloneRetentionDays);
     if (removed > 0) {
-      console.log(`revu pruned ${removed} unused clone(s)`);
+      console.log(`ravi pruned ${removed} unused clone(s)`);
     }
   } catch (error) {
-    console.error('revu could not prune clones:', error instanceof Error ? error.message : String(error));
+    console.error('ravi could not prune clones:', error instanceof Error ? error.message : String(error));
   }
 }
 

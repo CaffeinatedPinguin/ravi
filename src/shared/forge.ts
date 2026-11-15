@@ -233,7 +233,7 @@ export const ForgeStatusSchema = z.object({
   host: z.string(),
   /** Strategy that handles the host. */
   kind: ForgeKindSchema,
-  /** Whether a token for this host exists in `~/.revu/.env`; the token itself never leaves the server. */
+  /** Whether a token for this host exists in `~/.ravi/.env`; the token itself never leaves the server. */
   hasToken: z.boolean(),
   /** Base browser URL of the host. */
   webUrl: z.string(),

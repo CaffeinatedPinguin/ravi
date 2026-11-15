@@ -1,6 +1,6 @@
 /**
  * The dashboard proof: first-run setup with nothing connected, then a repository with local changes
- * and the three pull request groups. The app runs from `dist/revu.mjs`; the forge is a tiny loopback
+ * and the three pull request groups. The app runs from `dist/ravi.mjs`; the forge is a tiny loopback
  * server so no request leaves the machine.
  */
 import { execFileSync } from 'node:child_process';
@@ -80,7 +80,7 @@ function send(response: ServerResponse, status: number, value: unknown): void {
 
 /** A fresh home with no repositories; the folder itself is deliberately not a git repository. */
 function emptyFixture(): Fixture {
-  const root = mkdtempSync(join(tmpdir(), 'revu-e2e-setup-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-e2e-setup-'));
   const repoPath = join(root, 'not-a-repo');
   const home = join(root, 'home');
   mkdirSync(repoPath);
@@ -119,7 +119,7 @@ test.describe('dashboard', () => {
     await page.goto(`${setupApp.baseUrl}/`);
 
     await expect(page.getByRole('heading', { name: /Review local changes/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'revu by smrodek.xyz' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'ravi by smrodek.xyz' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add your first repository' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'How tokens work' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Notifications/ })).toBeVisible();
@@ -134,7 +134,7 @@ test.describe('dashboard', () => {
     await expect(page.getByRole('navigation', { name: 'Changed files' })).toBeVisible();
     await page.goto(`${app.baseUrl}/`);
 
-    await expect(page.getByRole('heading', { name: 'revu', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ravi', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'sample-repo' })).toBeVisible();
     await expect(page.getByText(/untracked/)).toBeVisible();
     await expect(page.getByRole('heading', { name: /Waiting for my review/ })).toBeVisible();

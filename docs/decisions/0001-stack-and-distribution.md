@@ -6,14 +6,14 @@
 
 ## Context
 
-revu must be trivial to install on Windows, Linux and macOS and must not scatter files: no
+ravi must be trivial to install on Windows, Linux and macOS and must not scatter files: no
 `node_modules`, no installer with many parts. Target machines already have Node installed.
 Maintainability matters more than features, and the project is open source.
 
 ## Decision
 
 Write the server and the UI in TypeScript, require Node ≥ 22, and ship one bundled file
-(`revu.mjs`, UI embedded) plus two launcher scripts. Keep runtime dependencies to a short list of
+(`ravi.mjs`, UI embedded) plus two launcher scripts. Keep runtime dependencies to a short list of
 widely used libraries: `react`, `react-dom`, `@tanstack/react-virtual`, `shiki`, `markdown-it`, `zod`.
 
 ## Consequences

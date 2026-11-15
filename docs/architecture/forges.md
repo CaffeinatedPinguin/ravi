@@ -1,6 +1,6 @@
 # Forge layer
 
-revu talks to GitHub and GitLab through one strategy interface. The UI and the review logic ask a
+ravi talks to GitHub and GitLab through one strategy interface. The UI and the review logic ask a
 forge what it can do (`capabilities`) and never which forge it is, so a new host is one strategy file
 plus one registry entry.
 
@@ -22,7 +22,7 @@ plus one registry entry.
 
 ## Rules
 
-- Tokens live only in `~/.revu/.env`; Settings → Accounts and the repository connection step write
+- Tokens live only in `~/.ravi/.env`; Settings → Accounts and the repository connection step write
   them there, `process.env` is never read, and a missing file means no tokens.
 - A token is attached by the registry's auth callback on every request and is never stored on the
   strategy object, logged, returned by a route or serialised into `ForgeStatus`. Routes expose only
@@ -44,7 +44,7 @@ plus one registry entry.
    and auth headers) and map the kind to the factory in `FACTORIES`.
 4. Run `describeForgeContract` for the new strategy, supplying network fixtures once the methods are
    implemented.
-5. Add the token variable to the user documentation for `~/.revu/.env`.
+5. Add the token variable to the user documentation for `~/.ravi/.env`.
 
 ## Tests
 

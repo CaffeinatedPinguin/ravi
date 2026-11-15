@@ -1,4 +1,4 @@
-/** Production entry point bundled into `dist/revu.mjs`; the UI is embedded at build time. */
+/** Production entry point bundled into `dist/ravi.mjs`; the UI is embedded at build time. */
 import encodedAssets from 'virtual:ui-assets';
 import { run } from './cli.ts';
 import { decodeUiAssets } from './http/static.ts';

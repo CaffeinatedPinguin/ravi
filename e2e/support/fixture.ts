@@ -9,10 +9,10 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 export type Fixture = {
-  /** Temporary parent of the repository and the revu home. */
+  /** Temporary parent of the repository and the ravi home. */
   root: string;
   repoPath: string;
-  /** Fresh `REVU_HOME`, so the run cannot see the user's settings or tokens. */
+  /** Fresh `RAVI_HOME`, so the run cannot see the user's settings or tokens. */
   home: string;
   cleanup: () => void;
 };
@@ -20,7 +20,7 @@ export type Fixture = {
 const LONG_LINES = 240;
 
 export function createFixture(): Fixture {
-  const root = mkdtempSync(join(tmpdir(), 'revu-e2e-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-e2e-'));
   const repoPath = join(root, 'sample-repo');
   const home = join(root, 'home');
   mkdirSync(repoPath, { recursive: true });
@@ -56,7 +56,7 @@ export function createFixture(): Fixture {
   };
   const commit = (message: string): void => git('commit', '-q', '--no-verify', '-m', message);
 
-  file('README.md', '# sample-repo\n\nA fixture for the revu end-to-end suite.\n');
+  file('README.md', '# sample-repo\n\nA fixture for the ravi end-to-end suite.\n');
   file('src/app.ts', appFile([]));
   file('src/util.ts', 'export function sum(values: number[]): number {\n  return values.reduce((a, b) => a + b, 0);\n}\n');
   file('src/long.ts', longFile(false));
@@ -66,7 +66,7 @@ export function createFixture(): Fixture {
   git('add', '-A');
   commit('base');
 
-  file('README.md', '# sample-repo\n\nA fixture for the revu end-to-end suite.\n\nMaintained by the tests.\n');
+  file('README.md', '# sample-repo\n\nA fixture for the ravi end-to-end suite.\n\nMaintained by the tests.\n');
   git('add', '-A');
   commit('docs');
 

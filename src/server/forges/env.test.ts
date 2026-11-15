@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readForgeTokens, reloadForgeTokens } from './env.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-forge-env-'));
+const home = mkdtempSync(join(tmpdir(), 'ravi-forge-env-'));
 const envFile = join(home, '.env');
 
 beforeEach(() => {

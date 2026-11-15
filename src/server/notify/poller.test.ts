@@ -23,9 +23,9 @@ afterAll(() => {
 });
 
 async function makePaths(repos: Repo[]): Promise<ReturnType<typeof resolvePaths>> {
-  const home = mkdtempSync(join(tmpdir(), 'revu-notify-'));
+  const home = mkdtempSync(join(tmpdir(), 'ravi-notify-'));
   tempDirs.push(home);
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   await writeJsonFile(join(paths.data, 'repos.json'), repos);
   return paths;
 }
@@ -33,7 +33,7 @@ async function makePaths(repos: Repo[]): Promise<ReturnType<typeof resolvePaths>
 function repo(id: string, project = 'acme/api'): Repo {
   return {
     id,
-    path: join(tmpdir(), 'revu-notify-checkout', id),
+    path: join(tmpdir(), 'ravi-notify-checkout', id),
     name: id,
     lastUsedAt: '2026-11-14T10:00:00.000Z',
     kind: 'local',
@@ -226,7 +226,7 @@ describe('pollOnce', () => {
     const paths = await makePaths([repo('a1b2c3d4')]);
     writeFileSync(
       paths.envFile,
-      'GITHUB_TOKEN=host-token-111\nREVU_TOKEN_A1B2C3D4=repo-token-222\n',
+      'GITHUB_TOKEN=host-token-111\nRAVI_TOKEN_A1B2C3D4=repo-token-222\n',
     );
     const fake = fakeFetch({
       'GET https://api.github.com/user': { json: { login: 'octocat' } },

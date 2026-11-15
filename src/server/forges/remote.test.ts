@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { detectRepoRef, parseRemoteUrl } from './remote.ts';
 
-const repo = mkdtempSync(join(tmpdir(), 'revu-forge-remote-'));
+const repo = mkdtempSync(join(tmpdir(), 'ravi-forge-remote-'));
 
 function git(args: string[]): void {
   execFileSync('git', args, { cwd: repo, stdio: 'pipe' });

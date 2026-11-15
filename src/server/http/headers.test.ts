@@ -15,7 +15,7 @@ const security: SecurityOptions = {
 const assets = decodeUiAssets({
   '/index.html': {
     type: 'text/html; charset=utf-8',
-    gzipBase64: gzipSync(Buffer.from('<!doctype html><html><body>revu</body></html>')).toString('base64'),
+    gzipBase64: gzipSync(Buffer.from('<!doctype html><html><body>ravi</body></html>')).toString('base64'),
   },
   '/assets/app.js': {
     type: 'text/javascript; charset=utf-8',
@@ -93,7 +93,7 @@ describe('security headers', () => {
 
   it('puts them on JSON API answers and API errors', async () => {
     const router = new Router();
-    router.get('/api/health', () => ({ app: 'revu', version: 'test' }));
+    router.get('/api/health', () => ({ app: 'ravi', version: 'test' }));
 
     const success = captureResponse();
     await handleRequest(request('/api/health'), success.res, { router, security, assets });

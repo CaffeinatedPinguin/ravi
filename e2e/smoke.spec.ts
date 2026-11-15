@@ -1,7 +1,7 @@
 /**
  * Smoke tests for the built app in Microsoft Edge: the start page, a local review with an inline
  * draft that survives a reload, and the settings page. Each test also writes light/dark screenshots
- * for the orchestrator (REVU_E2E_SCREENS, default `.e2e-out/screens`).
+ * for the orchestrator (RAVI_E2E_SCREENS, default `.e2e-out/screens`).
  */
 import { expect, test } from '@playwright/test';
 import { startApp } from './support/app.ts';
@@ -36,7 +36,7 @@ test.beforeEach(async ({ page }) => {
 
 test('start page lists the fixture repository', async ({ page }) => {
   await page.goto(`${app.baseUrl}/`);
-  await expect(page.getByRole('heading', { name: 'revu', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'ravi', exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /sample-repo/ })).toBeVisible();
   await shot(page, app.baseUrl, 'home');
 });

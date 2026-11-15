@@ -2,15 +2,15 @@
 
 ## Runtime model
 
-`revu` is one Node process and one browser tab.
+`ravi` is one Node process and one browser tab.
 
-- `dist/revu.mjs` contains the server, its dependencies and the built UI (gzip, embedded).
+- `dist/ravi.mjs` contains the server, its dependencies and the built UI (gzip, embedded).
 - The server listens on `127.0.0.1` only, serves the UI and a JSON API under `/api`.
 - Git is used by spawning the `git` executable; there is no git library.
 - Forges (GitHub, GitLab) are reached with the built-in `fetch`.
 - Comment images are served from the data folder or through a server-side proxy, so the browser
   never holds a forge token.
-- A second `revu` invocation finds the running instance and only opens the browser.
+- A second `ravi` invocation finds the running instance and only opens the browser.
 
 ## Module layout
 
@@ -30,13 +30,13 @@
 | `src/ui/app/` | App shell, API client, routing |
 | `src/ui/features/` | One folder per feature (repos, diff, comments, pulls, dashboard, notifications, review, settings) |
 | `scripts/` | Dev server, build finishing step, benchmark, test fixtures |
-| `e2e/` | Playwright tests in Microsoft Edge against the built `dist/revu.mjs` |
+| `e2e/` | Playwright tests in Microsoft Edge against the built `dist/ravi.mjs` |
 
 Dependencies point one way: `ui → shared ← server`. Features do not import each other's internals.
 
 ## Data folder
 
-Everything lives in `~/.revu` (override with `REVU_HOME`):
+Everything lives in `~/.ravi` (override with `REVU_HOME`):
 
 | Path | Content |
 |---|---|
@@ -59,9 +59,9 @@ The server holds forge tokens and can run git, so it defends against other web p
 - Loopback bind only.
 - `Host` header must be the server's own address (DNS rebinding).
 - API calls need the session cookie; the CLI opens `/?token=…`, the server sets an HttpOnly cookie and redirects.
-- Mutating calls need the `x-revu` header (CSRF).
+- Mutating calls need the `x-ravi` header (CSRF).
 - File paths are validated against the repository root; git arguments are passed as an array, never through a shell.
-- Tokens are read only from `~/.revu/.env`; they are never returned to the UI, logged or exported.
+- Tokens are read only from `~/.ravi/.env`; they are never returned to the UI, logged or exported.
 - Comment images go through `/api/image-proxy` or `/api/assets/:id`, with a host allowlist,
   `nosniff` and a restrictive content security policy.
 
@@ -73,6 +73,6 @@ The implementation and rationale live in `src/server/http/security.ts`.
 server and embeds `dist/ui` through the `virtual:ui-assets` module, and `scripts/finish-build.ts`
 writes the launchers and removes `dist/ui`.
 
-`pnpm e2e` starts the built `dist/revu.mjs` and drives it with Playwright in Microsoft Edge against
+`pnpm e2e` starts the built `dist/ravi.mjs` and drives it with Playwright in Microsoft Edge against
 a temporary repository and a loopback fake forge. `pnpm bench` times the server side of a huge diff
 on a throwaway repository.

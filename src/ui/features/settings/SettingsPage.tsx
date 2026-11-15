@@ -144,12 +144,12 @@ export function SettingsPage() {
           {permission === 'denied' && (
             <p className={styles.fieldError} role="alert">
               Desktop notifications are blocked for this site. Open the browser&apos;s site settings (the icon next to the
-              address), allow notifications for revu, then reload this page.
+              address), allow notifications for ravi, then reload this page.
             </p>
           )}
           <Row
             label="Server poll interval"
-            hint="1–60 minutes. The inbox still checks once a minute while revu is open."
+            hint="1–60 minutes. The inbox still checks once a minute while ravi is open."
           >
             <input
               className={styles.number}

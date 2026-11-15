@@ -1,4 +1,4 @@
-/** Settings → Accounts: one token per forge host, stored by revu in `~/.revu/.env` and shown masked. */
+/** Settings → Accounts: one token per forge host, stored by ravi in `~/.ravi/.env` and shown masked. */
 import { useState } from 'react';
 import { ForgeStatusViewListSchema, ForgeStatusViewSchema } from '../../../shared/api.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
@@ -33,8 +33,8 @@ export function AccountsSettingsSection() {
   return (
     <Section title="Accounts">
       <p className={styles.hint}>
-        Tokens are stored in <code>~/.revu/.env</code> (only readable by you). Set them here under Accounts or per
-        repository; revu never shows them again — only the last four characters.
+        Tokens are stored in <code>~/.ravi/.env</code> (only readable by you). Set them here under Accounts or per
+        repository; ravi never shows them again — only the last four characters.
       </p>
       {(error ?? forges.error) !== null && (
         <p className={styles.fieldError} role="alert">

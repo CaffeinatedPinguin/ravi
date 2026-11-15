@@ -1,7 +1,7 @@
 /**
  * System folder picker.
  *
- * A browser cannot open a native folder dialog for the server, so revu asks the operating system
+ * A browser cannot open a native folder dialog for the server, so ravi asks the operating system
  * on behalf of the settings screen. Commands are spawned with an argument array (no shell) and the
  * only value that leaves is the path the user picked. The dialog is modal and can stay open for a
  * long time, hence the single-dialog guard and the five-minute limit.
@@ -51,9 +51,9 @@ const WINDOWS_SCRIPT = [
 
 export async function pickFolder(options: PickFolderOptions = {}): Promise<string | null> {
   const env = options.env ?? process.env;
-  // The E2E harness must never open a real dialog; the override is ignored outside REVU_E2E=1.
-  if (env.REVU_E2E === '1') {
-    const override = (env.REVU_E2E_PICK_FOLDER ?? '').trim();
+  // The E2E harness must never open a real dialog; the override is ignored outside RAVI_E2E=1.
+  if (env.RAVI_E2E === '1') {
+    const override = (env.RAVI_E2E_PICK_FOLDER ?? '').trim();
     if (override !== '') {
       return override;
     }

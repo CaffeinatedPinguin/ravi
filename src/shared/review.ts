@@ -13,7 +13,7 @@ export const CommentSideSchema = z.enum(['new', 'old']);
 export type CommentSide = z.infer<typeof CommentSideSchema>;
 
 export const CommentStateSchema = z.enum(['draft', 'published']);
-/** Whether a comment exists only in revu or already on the forge. */
+/** Whether a comment exists only in ravi or already on the forge. */
 export type CommentState = z.infer<typeof CommentStateSchema>;
 
 export const ReviewActionSchema = z.enum(['comment', 'approve', 'requestChanges']);

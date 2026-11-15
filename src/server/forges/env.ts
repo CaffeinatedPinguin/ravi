@@ -1,5 +1,5 @@
 /**
- * Token storage: revu reads `~/.revu/.env` and nothing else.
+ * Token storage: ravi reads `~/.ravi/.env` and nothing else.
  *
  * The environment is deliberately ignored: a token exported in a shell profile would leak into
  * child processes and be hard to rotate. Values are cached because every API call needs them, and

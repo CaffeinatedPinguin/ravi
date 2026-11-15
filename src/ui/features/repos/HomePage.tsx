@@ -65,13 +65,13 @@ export function HomePage({ notice }: { notice: string | null }) {
             navigate('/');
           }}
         >
-          revu
+          ravi
         </a>
         <span className={page.spacer} />
         <TopBarActions />
       </header>
       <main className={styles.page}>
-        <h1 className={styles.title}>revu</h1>
+        <h1 className={styles.title}>ravi</h1>
 
       <ReviewLaterSection repos={repos.data ?? []} />
 
@@ -128,7 +128,7 @@ export function HomePage({ notice }: { notice: string | null }) {
       <section aria-labelledby="repos-heading">
         <h2 id="repos-heading">Local folders</h2>
         {repos.error !== null && <p className={styles.error}>{repos.error}</p>}
-        {localRepos.length === 0 && <p className={styles.empty}>Nothing connected yet. Add a folder above, or run `revu` inside a repository.</p>}
+        {localRepos.length === 0 && <p className={styles.empty}>Nothing connected yet. Add a folder above, or run `ravi` inside a repository.</p>}
         <ul className={styles.list}>
           {localRepos.map((repo) => (
             <li key={repo.id} className={styles.item}>

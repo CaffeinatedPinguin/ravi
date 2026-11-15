@@ -1,5 +1,5 @@
 /**
- * Bundles the server, all its dependencies and the built UI into the single file `dist/revu.mjs`.
+ * Bundles the server, all its dependencies and the built UI into the single file `dist/ravi.mjs`.
  * That file plus Node is the whole installation: no node_modules, no asset folder.
  */
 import { readdirSync, readFileSync } from 'node:fs';
@@ -61,7 +61,7 @@ export default defineConfig({
     emptyOutDir: false,
     minify: false,
     rolldownOptions: {
-      output: { entryFileNames: 'revu.mjs', codeSplitting: false },
+      output: { entryFileNames: 'ravi.mjs', codeSplitting: false },
     },
   },
 });

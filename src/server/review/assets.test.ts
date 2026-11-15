@@ -6,9 +6,9 @@ import { MAX_ASSET_BYTES } from '../../shared/api.ts';
 import { resolvePaths } from '../paths.ts';
 import { importLocalImage, readAsset, saveAsset } from './assets.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-assets-'));
-const paths = resolvePaths({ REVU_HOME: home });
-const workspace = mkdtempSync(join(tmpdir(), 'revu-assets-work-'));
+const home = mkdtempSync(join(tmpdir(), 'ravi-assets-'));
+const paths = resolvePaths({ RAVI_HOME: home });
+const workspace = mkdtempSync(join(tmpdir(), 'ravi-assets-work-'));
 const repo = join(workspace, 'repo');
 const outside = join(workspace, 'outside');
 

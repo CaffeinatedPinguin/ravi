@@ -136,10 +136,10 @@ describe('pickFolder', () => {
     expect((error as HttpError).message).toContain('Paste path');
   });
 
-  it('uses the E2E override only when REVU_E2E=1', async () => {
+  it('uses the E2E override only when RAVI_E2E=1', async () => {
     const override = await pickFolder({
       platform: 'win32',
-      env: { REVU_E2E: '1', REVU_E2E_PICK_FOLDER: 'C:\\fixture\\sample-repo' },
+      env: { RAVI_E2E: '1', RAVI_E2E_PICK_FOLDER: 'C:\\fixture\\sample-repo' },
       runner: () => Promise.reject(new Error('the runner must not be used in E2E')),
     });
     expect(override).toBe('C:\\fixture\\sample-repo');
@@ -147,7 +147,7 @@ describe('pickFolder', () => {
     const runs: Run[] = [];
     await pickFolder({
       platform: 'win32',
-      env: { REVU_E2E_PICK_FOLDER: 'C:\\ignored' },
+      env: { RAVI_E2E_PICK_FOLDER: 'C:\\ignored' },
       runner: (run) => {
         runs.push(run);
         return Promise.resolve(answered(''));

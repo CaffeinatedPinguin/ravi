@@ -40,7 +40,7 @@ export function App() {
 }
 
 /**
- * `revu <folder>` opens the app with `?open=<folder>`: connect that folder and go to its review.
+ * `ravi <folder>` opens the app with `?open=<folder>`: connect that folder and go to its review.
  * Returns a message when the folder is not a repository, so the start screen can explain.
  */
 function useOpenFolder(folder: string | null): string | null {

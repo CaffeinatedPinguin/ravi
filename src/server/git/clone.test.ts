@@ -25,8 +25,8 @@ function git(root: string, args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,
@@ -36,14 +36,14 @@ function git(root: string, args: string[]): string {
 }
 
 function makePaths(): Paths {
-  const home = mkdtempSync(join(tmpdir(), 'revu-clone-'));
+  const home = mkdtempSync(join(tmpdir(), 'ravi-clone-'));
   tempDirs.push(home);
-  return resolvePaths({ REVU_HOME: home });
+  return resolvePaths({ RAVI_HOME: home });
 }
 
 /** Source repository with two commits and a fake pull request ref, served over `file://` only. */
 beforeAll(() => {
-  source = mkdtempSync(join(tmpdir(), 'revu-clone-source-'));
+  source = mkdtempSync(join(tmpdir(), 'ravi-clone-source-'));
   tempDirs.push(source);
   git(source, ['init', '-b', 'main']);
   writeFileSync(join(source, 'a.txt'), 'one\n');
@@ -84,7 +84,7 @@ describe('cloneRemote and fetchPullRequest', () => {
 
     const headSha = await fetchPullRequest(clone, true, 'pull/7/head', 7);
     expect(headSha).toBe(secondSha);
-    expect(git(clone, ['rev-parse', 'refs/revu/pr/7/head']).trim()).toBe(secondSha);
+    expect(git(clone, ['rev-parse', 'refs/ravi/pr/7/head']).trim()).toBe(secondSha);
 
     // The diff must still work although file contents are not in the clone (they are fetched lazily).
     const summary = await diffSummary(clone, {
@@ -135,7 +135,7 @@ describe('cloneRemote and fetchPullRequest', () => {
 
   it('prefers the repository token over the host token for HTTPS', async () => {
     const paths = makePaths();
-    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-123\nREVU_TOKEN_A1B2C3D4E5F6=repo-token-456\n');
+    writeFileSync(paths.envFile, 'GITHUB_TOKEN=host-token-123\nRAVI_TOKEN_A1B2C3D4E5F6=repo-token-456\n');
     reloadForgeTokens();
     const ref: RepoRef = { host: 'github.com', project: 'acme/api' };
 

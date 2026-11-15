@@ -16,11 +16,11 @@ export function requireRemote(repo: Repo): RepoRef {
   return repo.remote;
 }
 
-/** Test seam: the real lookup reads the token from `~/.revu/.env`; tests pass a fake. */
+/** Test seam: the real lookup reads the token from `~/.ravi/.env`; tests pass a fake. */
 export type ForgeLookup = (repo: Repo) => Promise<Forge>;
 
 export function defaultForgeLookup(paths: Paths): ForgeLookup {
-  // The repository id (and its token scope) selects `REVU_TOKEN_<REPOID>` before the host token.
+  // The repository id (and its token scope) selects `RAVI_TOKEN_<REPOID>` before the host token.
   return async (repo) =>
     forgeFor(paths, requireRemote(repo), { repoId: repo.id, tokenScope: repo.tokenScope });
 }

@@ -1,6 +1,6 @@
 /**
- * Starts the built `dist/revu.mjs` against the fixture, with the E2E forge override and a fresh
- * `REVU_HOME`. The CLI prints the one-time token URL; opening it in the page sets the session cookie.
+ * Starts the built `dist/ravi.mjs` against the fixture, with the E2E forge override and a fresh
+ * `RAVI_HOME`. The CLI prints the one-time token URL; opening it in the page sets the session cookie.
  * The gate builds `dist/` before this runs.
  */
 import { spawn } from 'node:child_process';
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import type { Fixture } from './fixture.ts';
 
 const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
-const ENTRY = join(REPO_ROOT, 'dist', 'revu.mjs');
+const ENTRY = join(REPO_ROOT, 'dist', 'ravi.mjs');
 const START_TIMEOUT_MS = 20_000;
 
 export type AppServer = {
@@ -27,7 +27,7 @@ export async function startApp(fixture: Fixture, forgeUrl: string): Promise<AppS
   const baseUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, [ENTRY, fixture.repoPath, '--no-open', '--port', String(port)], {
     cwd: REPO_ROOT,
-    env: { ...process.env, REVU_HOME: fixture.home, REVU_E2E: '1', REVU_E2E_FORGE: forgeUrl },
+    env: { ...process.env, RAVI_HOME: fixture.home, RAVI_E2E: '1', RAVI_E2E_FORGE: forgeUrl },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stderr = '';
@@ -43,7 +43,7 @@ function printedUrl(child: ChildProcess, stderr: () => string): Promise<string> 
   return new Promise((resolve, reject) => {
     let output = '';
     const timer = setTimeout(
-      () => reject(new Error(`revu did not start in ${START_TIMEOUT_MS} ms:\n${output}\n${stderr()}`)),
+      () => reject(new Error(`ravi did not start in ${START_TIMEOUT_MS} ms:\n${output}\n${stderr()}`)),
       START_TIMEOUT_MS,
     );
     child.stdout?.setEncoding('utf8');
@@ -57,7 +57,7 @@ function printedUrl(child: ChildProcess, stderr: () => string): Promise<string> 
     });
     child.once('exit', (code) => {
       clearTimeout(timer);
-      reject(new Error(`revu exited with ${String(code)}:\n${output}\n${stderr()}`));
+      reject(new Error(`ravi exited with ${String(code)}:\n${output}\n${stderr()}`));
     });
   });
 }

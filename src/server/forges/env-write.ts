@@ -1,5 +1,5 @@
 /**
- * The only writer of `~/.revu/.env`.
+ * The only writer of `~/.ravi/.env`.
  *
  * Tokens are written here only from Settings, so a user no longer has to edit the file by hand.
  * The file is shared with the user: comments, ordering and unrelated variables must survive

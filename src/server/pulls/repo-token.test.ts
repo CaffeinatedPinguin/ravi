@@ -3,7 +3,7 @@
  *
  * The tests drive the real `defaultForgeLookup` (no fake forge): the only substitution is the global
  * `fetch`, which records the `authorization` header of every request. Both `GITHUB_TOKEN` and
- * `REVU_TOKEN_<REPOID>` are present in the temporary `.env`, so the host token would win if the route
+ * `RAVI_TOKEN_<REPOID>` are present in the temporary `.env`, so the host token would win if the route
  * forgot to pass the repository id.
  */
 import { execFileSync } from 'node:child_process';
@@ -37,8 +37,8 @@ function git(cwd: string, args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,
@@ -48,7 +48,7 @@ function git(cwd: string, args: string[]): string {
 }
 
 function temp(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), `revu-${prefix}-`));
+  const dir = mkdtempSync(join(tmpdir(), `ravi-${prefix}-`));
   tempDirs.push(dir);
   return dir;
 }
@@ -80,10 +80,10 @@ afterAll(() => {
 /** A fresh home whose `.env` holds both tokens; the repository is connected with the default scope. */
 async function makeHome(repoPath: string): Promise<ReturnType<typeof resolvePaths>> {
   const home = temp('repo-token-home');
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   writeFileSync(
     paths.envFile,
-    `GITHUB_TOKEN=${HOST_TOKEN}\nREVU_TOKEN_${REPO_ID.toUpperCase()}=${REPO_TOKEN}\n`,
+    `GITHUB_TOKEN=${HOST_TOKEN}\nRAVI_TOKEN_${REPO_ID.toUpperCase()}=${REPO_TOKEN}\n`,
   );
   const repo: Repo = {
     id: REPO_ID,
@@ -125,8 +125,8 @@ function expectRepositoryToken(fake: FakeFetch): void {
 }
 
 describe('repository token on pull request routes', () => {
-  it('lists pull requests with REVU_TOKEN_<REPOID>, not the host token', async () => {
-    const paths = await makeHome(join(tmpdir(), 'revu-repo-token-list'));
+  it('lists pull requests with RAVI_TOKEN_<REPOID>, not the host token', async () => {
+    const paths = await makeHome(join(tmpdir(), 'ravi-repo-token-list'));
     const fake = fakeFetch({
       [`GET ${API}/user`]: { json: { login: 'octocat' } },
       [`GET ${API}${PROJECT}/pulls?state=open&per_page=100`]: { json: [pullDetails()] },
@@ -142,7 +142,7 @@ describe('repository token on pull request routes', () => {
     expectRepositoryToken(fake);
   });
 
-  it('opens a pull request with REVU_TOKEN_<REPOID>, not the host token', async () => {
+  it('opens a pull request with RAVI_TOKEN_<REPOID>, not the host token', async () => {
     const clone = temp('repo-token-clone');
     execFileSync('git', ['clone', '-q', pathToFileURL(source).href, clone], { cwd: tmpdir(), encoding: 'utf8' });
     const paths = await makeHome(clone);

@@ -33,7 +33,7 @@ export type ForgeHost = {
   apiUrl: string;
   /** Base URL of the host's web UI. */
   webUrl: string;
-  /** Name of the variable in `~/.revu/.env` that holds the token. */
+  /** Name of the variable in `~/.ravi/.env` that holds the token. */
   tokenEnv: string;
   /** Adds the forge-specific authentication headers; the token is passed in, never stored here. */
   auth: (token: string, headers: Headers) => void;

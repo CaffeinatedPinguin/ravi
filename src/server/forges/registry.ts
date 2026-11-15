@@ -97,14 +97,14 @@ export type ForgeForOptions = {
 };
 
 /**
- * Name of the `~/.revu/.env` variable that holds a repository's own token.
- * Ids are lowercase hex; anything else cannot have been assigned by revu, so it gets no name.
+ * Name of the `~/.ravi/.env` variable that holds a repository's own token.
+ * Ids are lowercase hex; anything else cannot have been assigned by ravi, so it gets no name.
  */
 export function repoTokenEnv(repoId: string): string | null {
   if (!/^[a-z0-9]{1,52}$/i.test(repoId)) {
     return null;
   }
-  return `REVU_TOKEN_${repoId.toUpperCase()}`;
+  return `RAVI_TOKEN_${repoId.toUpperCase()}`;
 }
 
 /** Only the last four characters ever leave the server, and a short token stays fully hidden. */
@@ -159,7 +159,7 @@ export async function forgeFor(paths: Paths, repo: RepoRef, options: ForgeForOpt
     options.tokenScope,
   );
   if (token === undefined) {
-    throw new HttpError(401, `No token for ${host.host}: add ${host.tokenEnv} to ~/.revu/.env`);
+    throw new HttpError(401, `No token for ${host.host}: add ${host.tokenEnv} to ~/.ravi/.env`);
   }
 
   const auth = (headers: Headers): void => host.auth(token, headers);

@@ -26,9 +26,9 @@ afterAll(() => {
 
 /** A fresh data folder with the repository already connected; the checkout itself is never touched. */
 async function makePaths(): Promise<ReturnType<typeof resolvePaths>> {
-  const home = mkdtempSync(join(tmpdir(), 'revu-review-later-'));
+  const home = mkdtempSync(join(tmpdir(), 'ravi-review-later-'));
   tempDirs.push(home);
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   const repo: Repo = {
     id: REPO_ID,
     path: join(home, 'checkout'),

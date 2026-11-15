@@ -1,13 +1,13 @@
 /**
- * Everything revu owns on disk lives under one folder (`~/.revu`), so it is easy to find and to delete.
- * `REVU_HOME` overrides the location; tests and development use it to stay out of the real folder.
+ * Everything ravi owns on disk lives under one folder (`~/.ravi`), so it is easy to find and to delete.
+ * `RAVI_HOME` overrides the location; tests and development use it to stay out of the real folder.
  */
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 export type Paths = {
   home: string;
-  /** Tokens, written by the user, never by revu. */
+  /** Tokens, written by the user, never by ravi. */
   envFile: string;
   data: string;
   assets: string;
@@ -15,7 +15,7 @@ export type Paths = {
 };
 
 export function resolvePaths(env: NodeJS.ProcessEnv = process.env): Paths {
-  const home = env.REVU_HOME ?? join(homedir(), '.revu');
+  const home = env.RAVI_HOME ?? join(homedir(), '.ravi');
   const data = join(home, 'data');
   return {
     home,

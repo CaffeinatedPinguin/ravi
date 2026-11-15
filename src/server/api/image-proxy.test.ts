@@ -10,8 +10,8 @@ import { resolvePaths } from '../paths.ts';
 import { writeJsonFile } from '../store/json-file.ts';
 import { registerImageProxyRoutes } from './image-proxy.ts';
 
-const home = mkdtempSync(join(tmpdir(), 'revu-image-proxy-'));
-const paths = resolvePaths({ REVU_HOME: home });
+const home = mkdtempSync(join(tmpdir(), 'ravi-image-proxy-'));
+const paths = resolvePaths({ RAVI_HOME: home });
 const GITHUB_REPO = 'a1b2c3d4';
 const GITLAB_REPO = 'b1b2c3d4';
 
@@ -24,7 +24,7 @@ beforeAll(async () => {
   await writeJsonFile(join(paths.data, 'repos.json'), [
     {
       id: GITHUB_REPO,
-      path: 'C:/revu/gh',
+      path: 'C:/ravi/gh',
       name: 'api',
       lastUsedAt: '2026-11-14T10:00:00.000Z',
       kind: 'remote',
@@ -32,7 +32,7 @@ beforeAll(async () => {
     },
     {
       id: GITLAB_REPO,
-      path: 'C:/revu/gl',
+      path: 'C:/ravi/gl',
       name: 'proj',
       lastUsedAt: '2026-11-14T10:00:00.000Z',
       kind: 'remote',

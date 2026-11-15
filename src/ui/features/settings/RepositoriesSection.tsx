@@ -385,7 +385,7 @@ function RepositoryWizard({ repo, onCancel, onSaved }: WizardProps) {
               )}
             </div>
           ) : (
-            <p className={styles.hint}>Git uses your own SSH keys or agent; revu never reads them.</p>
+            <p className={styles.hint}>Git uses your own SSH keys or agent; ravi never reads them.</p>
           )}
 
           <p className={styles.hint}>

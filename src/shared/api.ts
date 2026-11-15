@@ -15,10 +15,10 @@ import { NotificationFiltersSchema } from './notify.ts';
 import { ImportErrorSchema, ReviewDocumentSchema, ReviewTargetSchema } from './review.ts';
 
 /** Header every mutating request must carry; see `src/server/http/security.ts`. */
-export const CSRF_HEADER = 'x-revu';
+export const CSRF_HEADER = 'x-ravi';
 
 export const HealthSchema = z.object({
-  app: z.literal('revu'),
+  app: z.literal('ravi'),
   version: z.string(),
 });
 export type Health = z.infer<typeof HealthSchema>;
@@ -105,7 +105,7 @@ export type {
 /** How git talks to the forge: the user's own keys, or a token over HTTPS. */
 export const RepoTransportSchema = z.enum(['ssh', 'https']);
 export type RepoTransport = z.infer<typeof RepoTransportSchema>;
-/** Where the token of a repository lives in `~/.revu/.env`. */
+/** Where the token of a repository lives in `~/.ravi/.env`. */
 export const RepoTokenScopeSchema = z.enum(['repo', 'host']);
 export type RepoTokenScope = z.infer<typeof RepoTokenScopeSchema>;
 

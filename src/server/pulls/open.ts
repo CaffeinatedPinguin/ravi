@@ -44,7 +44,7 @@ export type PullRequestOpenResponse = PullRequestOpen & {
 };
 
 /** Placeholders the forge URL is built with; they cannot collide with a real path or line number. */
-const TEMPLATE_PATH = 'REVU_PATH';
+const TEMPLATE_PATH = 'RAVI_PATH';
 const TEMPLATE_LINE = 999999;
 
 /**

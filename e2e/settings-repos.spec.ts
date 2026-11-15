@@ -2,7 +2,7 @@
  * Settings → Repositories and Accounts in the built app.
  *
  * The native folder dialog cannot run in a headless browser; the server replaces it with the path
- * in REVU_E2E_PICK_FOLDER when REVU_E2E=1. `startApp` passes the parent environment on, so setting
+ * in RAVI_E2E_PICK_FOLDER when RAVI_E2E=1. `startApp` passes the parent environment on, so setting
  * the variable here is enough.
  */
 import { execFileSync } from 'node:child_process';
@@ -28,13 +28,13 @@ test.beforeAll(async () => {
   fixture = createFixture();
   pickedRepo = makeRepository(join(fixture.root, 'picked-repo'));
   pastedRepo = makeRepository(join(fixture.root, 'pasted-repo'));
-  process.env.REVU_E2E_PICK_FOLDER = pickedRepo;
+  process.env.RAVI_E2E_PICK_FOLDER = pickedRepo;
   forge = await startFakeForge();
   app = await startApp(fixture, forge.url);
 });
 
 test.afterAll(async () => {
-  delete process.env.REVU_E2E_PICK_FOLDER;
+  delete process.env.RAVI_E2E_PICK_FOLDER;
   await app.stop();
   await forge.stop();
   fixture.cleanup();

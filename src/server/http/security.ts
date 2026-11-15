@@ -13,7 +13,7 @@ import type { IncomingMessage } from 'node:http';
 import { CSRF_HEADER } from '../../shared/api.ts';
 import { HttpError } from './router.ts';
 
-export const SESSION_COOKIE = 'revu_session';
+export const SESSION_COOKIE = 'ravi_session';
 
 export type SecurityOptions = {
   token: string;
@@ -32,7 +32,7 @@ export function assertAllowedHost(req: IncomingMessage, options: SecurityOptions
 
 export function assertApiAccess(req: IncomingMessage, options: SecurityOptions): void {
   if (!options.skipSession && !tokensMatch(readCookie(req, SESSION_COOKIE), options.token)) {
-    throw new HttpError(401, 'No session. Start revu from the terminal to open an authorised tab.');
+    throw new HttpError(401, 'No session. Start ravi from the terminal to open an authorised tab.');
   }
   if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers[CSRF_HEADER] !== '1') {
     throw new HttpError(403, `Missing ${CSRF_HEADER} header`);

@@ -57,7 +57,7 @@ function writeFiles(root: string, edited: boolean): void {
 
 /** The same change exists on the `edited` branch and (unstaged) in the working tree of `main`. */
 function createFixture(): string {
-  const root = mkdtempSync(join(tmpdir(), 'revu-bench-'));
+  const root = mkdtempSync(join(tmpdir(), 'ravi-bench-'));
   git(root, 'init', '-q', '-b', 'main');
   writeFiles(root, false);
   git(root, 'add', '-A');

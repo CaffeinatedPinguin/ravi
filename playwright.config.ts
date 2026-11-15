@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
 /**
- * Browser end-to-end tests: real `dist/revu.mjs` + the installed Microsoft Edge, no browser download.
+ * Browser end-to-end tests: real `dist/ravi.mjs` + the installed Microsoft Edge, no browser download.
  * One worker keeps the shared fixture editable and the screenshots deterministic.
  */
 export default defineConfig({

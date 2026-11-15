@@ -11,5 +11,5 @@ coverage/
 *.local
 .DS_Store
 Thumbs.db
-.revu-dev/
+.ravi-dev/
 .e2e-out/

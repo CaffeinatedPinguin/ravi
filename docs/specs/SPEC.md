@@ -1,4 +1,4 @@
-# revu — product spec
+# ravi — product spec
 
 ## Goal
 
@@ -21,7 +21,7 @@ requests, with comments that can be exchanged with AI agents and sent to the for
 - Switch between connected repositories and local folders.
 - Mark a pull request to review later.
 - Remember settings, connected repositories, local folders and the review-later list.
-- Tokens only from `~/.revu/.env`; Settings → Accounts and the repository connection step write
+- Tokens only from `~/.ravi/.env`; Settings → Accounts and the repository connection step write
   that file.
 - Remote repositories without a local folder use an app-managed partial clone that can be cleaned up.
 - New forges can be added as one strategy file plus one registry entry.

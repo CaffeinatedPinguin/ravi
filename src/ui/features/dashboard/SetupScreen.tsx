@@ -18,7 +18,7 @@ export function SetupScreen({ notice }: { notice: string | null }) {
         <div className={styles.setupHero}>
           <h1 className={styles.setupTitle}>Review local changes and pull requests in one calm place.</h1>
           <p className={styles.setupLead}>
-            revu reads your git folders and GitHub/GitLab pull requests, keeps review comments as drafts, and
+            ravi reads your git folders and GitHub/GitLab pull requests, keeps review comments as drafts, and
             sends them to the forge only when you ask. Everything stays on this machine.
           </p>
           {notice !== null && (
@@ -33,8 +33,8 @@ export function SetupScreen({ notice }: { notice: string | null }) {
             <Button onClick={() => navigate('/settings#accounts')}>How tokens work</Button>
           </div>
           <p className={styles.setupHint}>
-            Tokens are stored in <code>~/.revu/.env</code> (only readable by you). Set them in Settings → Accounts or
-            per repository; revu never shows them again.
+            Tokens are stored in <code>~/.ravi/.env</code> (only readable by you). Set them in Settings → Accounts or
+            per repository; ravi never shows them again.
           </p>
         </div>
       </main>

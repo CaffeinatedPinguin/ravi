@@ -77,7 +77,7 @@ describe('toMarkdown / fromMarkdown', () => {
 
     const markdown = toMarkdown(doc);
     expect(markdown.split('\n')[0]).toBe('# Code review: github.com/acme/api PR #123');
-    expect(markdown).toContain('revu-review v1 · base 9f1c2a7 · head a83e0b1 · action: request changes');
+    expect(markdown).toContain('ravi-review v1 · base 9f1c2a7 · head a83e0b1 · action: request changes');
     expect(markdown).toContain('## src/auth/login.ts:42-45 (new) · id c1001 · alice');
 
     const result = fromMarkdown(markdown);
@@ -103,7 +103,7 @@ describe('toMarkdown / fromMarkdown', () => {
       comments: [],
     });
     expect(gitlab).toContain('# Code review: gitlab.com/acme/api MR !45');
-    expect(gitlab).toContain('\nrevu-review v1\n');
+    expect(gitlab).toContain('\nravi-review v1\n');
 
     const local = toMarkdown({
       version: 1,
@@ -187,7 +187,7 @@ describe('toMarkdown / fromMarkdown', () => {
     // A hand-written file may still put a fence under a reply; import must not swallow it as body.
     const handwritten = [
       '# Code review: local C:/repo (uncommitted)',
-      'revu-review v1',
+      'ravi-review v1',
       '## src/a.ts:4 (new) · id l-root',
       '> root body',
       '### reply · id l-reply',
@@ -245,7 +245,7 @@ describe('toMarkdown / fromMarkdown', () => {
   it('imports a hand-written AI-style file: CRLF, no blank lines, missing prefix and one broken heading', () => {
     const lines = [
       '### Code review: github.com/acme/api PR #7   ',
-      'revu-review v1 · base 1111111 · head 2222222 · action: approve   ',
+      'ravi-review v1 · base 1111111 · head 2222222 · action: approve   ',
       '## src/a.ts:10 (new)   ',
       '> first line',
       '',

@@ -1,6 +1,6 @@
 /**
- * One revu server per user. The session token and the running instance's port are kept on disk so
- * that a second `revu` invocation reuses the running server instead of starting another one, and
+ * One ravi server per user. The session token and the running instance's port are kept on disk so
+ * that a second `ravi` invocation reuses the running server instead of starting another one, and
  * so that an already-open browser tab keeps working across restarts.
  */
 import { randomBytes } from 'node:crypto';
@@ -35,7 +35,7 @@ export async function loadOrCreateToken(paths: Paths): Promise<string> {
   return token;
 }
 
-/** Returns the recorded instance only if a revu server really answers on that port. */
+/** Returns the recorded instance only if a ravi server really answers on that port. */
 export async function findRunningInstance(paths: Paths, token: string): Promise<Instance | null> {
   const instance = await readJsonFile(instanceFile(paths), InstanceSchema.nullable(), null).catch(() => null);
   if (!instance) {

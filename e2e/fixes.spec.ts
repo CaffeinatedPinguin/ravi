@@ -74,7 +74,7 @@ test('the Settings page uses the shared brand and top bar actions', async ({ pag
   await page.goto(`${app.baseUrl}/settings`);
 
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'revu by smrodek.xyz' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ravi by smrodek.xyz' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Notifications/ })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
 

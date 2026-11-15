@@ -53,7 +53,7 @@ export function AccountsSection() {
                   Token present
                 </span>
               ) : (
-                <code className={styles.instruction}>add {token}=… to ~/.revu/.env</code>
+                <code className={styles.instruction}>add {token}=… to ~/.ravi/.env</code>
               )}
             </li>
           );

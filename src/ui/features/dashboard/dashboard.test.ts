@@ -41,23 +41,23 @@ describe('dashboard helpers', () => {
 
   it('filters repositories by a case-insensitive fragment of the name or path', () => {
     const repos = [
-      repo('a1b2c3d4', 'revu', '/src/revu'),
-      repo('b1b2c3d4', 'dashboard', '/work/REVU-dashboard'),
+      repo('a1b2c3d4', 'ravi', '/src/ravi'),
+      repo('b1b2c3d4', 'dashboard', '/work/RAVI-dashboard'),
       repo('c1b2c3d4', 'other', '/work/other'),
     ];
 
-    expect(filterRepos(repos, 'REVU').map((entry) => entry.name)).toEqual(['revu', 'dashboard']);
+    expect(filterRepos(repos, 'RAVI').map((entry) => entry.name)).toEqual(['ravi', 'dashboard']);
     expect(filterRepos(repos, ' work/other ').map((entry) => entry.name)).toEqual(['other']);
     expect(filterRepos(repos, '')).toEqual(repos);
   });
 
   it('chooses setup only while nothing is connected', () => {
     expect(startView([])).toBe('setup');
-    expect(startView([repo('a1b2c3d4', 'revu', '/src/revu')])).toBe('dashboard');
+    expect(startView([repo('a1b2c3d4', 'ravi', '/src/ravi')])).toBe('dashboard');
   });
 
   it('opens a remote repository on its pull requests and a local one on its review', () => {
-    expect(repoTarget(repo('a1b2c3d4', 'revu', '/src/revu'))).toBe('/repo/a1b2c3d4');
+    expect(repoTarget(repo('a1b2c3d4', 'ravi', '/src/ravi'))).toBe('/repo/a1b2c3d4');
     expect(repoTarget(repo('b1b2c3d4', 'api', '/clones/api.git', 'remote'))).toBe('/repo/b1b2c3d4/pulls');
   });
 

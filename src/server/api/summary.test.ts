@@ -21,7 +21,7 @@ afterAll(() => {
 });
 
 function temp(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), `revu-${prefix}-`));
+  const dir = mkdtempSync(join(tmpdir(), `ravi-${prefix}-`));
   tempDirs.push(dir);
   return dir;
 }
@@ -31,8 +31,8 @@ function git(cwd: string, args: string[]): string {
   return execFileSync(
     'git',
     [
-      '-c', 'user.name=revu test',
-      '-c', 'user.email=revu@example.com',
+      '-c', 'user.name=ravi test',
+      '-c', 'user.email=ravi@example.com',
       '-c', 'commit.gpgsign=false',
       '-c', 'core.autocrlf=false',
       ...args,
@@ -43,7 +43,7 @@ function git(cwd: string, args: string[]): string {
 
 async function connect(repo: Repo): Promise<ReturnType<typeof resolvePaths>> {
   const home = temp('summary-home');
-  const paths = resolvePaths({ REVU_HOME: home });
+  const paths = resolvePaths({ RAVI_HOME: home });
   await writeJsonFile(join(paths.data, 'repos.json'), [repo]);
   return paths;
 }

@@ -1,5 +1,5 @@
 /**
- * First run: an empty data folder teaches the new user the two things revu needs (a repository and
+ * First run: an empty data folder teaches the new user the two things ravi needs (a repository and
  * a connection choice) and ends on a dashboard that lists the connected folder.
  */
 import { join } from 'node:path';
@@ -22,13 +22,13 @@ test.beforeAll(async () => {
   fixture = emptyHomeFixture();
   pickedRepo = makeRepository(join(fixture.root, REPO_NAME));
   // The native folder dialog cannot run headless; the server substitutes this path in E2E mode.
-  process.env.REVU_E2E_PICK_FOLDER = pickedRepo;
+  process.env.RAVI_E2E_PICK_FOLDER = pickedRepo;
   forge = await startFakeForge();
   app = await startApp(fixture, forge.url);
 });
 
 test.afterAll(async () => {
-  delete process.env.REVU_E2E_PICK_FOLDER;
+  delete process.env.RAVI_E2E_PICK_FOLDER;
   await app.stop();
   await forge.stop();
   fixture.cleanup();

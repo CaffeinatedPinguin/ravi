@@ -2,7 +2,7 @@
  * Background poller for comments on the user's own open pull requests.
  *
  * The first time a pull request is seen its comments become the baseline: they are recorded as
- * seen (and kept for the preview) but notify nobody, so starting revu never bursts the inbox.
+ * seen (and kept for the preview) but notify nobody, so starting ravi never bursts the inbox.
  * Later polls notify only comments whose forge id was not seen before.
  *
  * Everything that touches the outside world is injectable (`forgeFor`, `now`, `timer`) so tests
@@ -312,7 +312,7 @@ export function startPoller(paths: Paths, deps: NotifyDeps = {}): { stop: () => 
       }
     } catch (error) {
       // A background job must not take the server down; the next cycle tries again.
-      console.error('revu notifications poll failed:', error instanceof Error ? error.message : String(error));
+      console.error('ravi notifications poll failed:', error instanceof Error ? error.message : String(error));
     } finally {
       running = false;
       schedule(delay);

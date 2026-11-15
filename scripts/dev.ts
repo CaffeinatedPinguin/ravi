@@ -1,6 +1,6 @@
 /**
  * Development: the API server runs in-process on a fixed port and Vite serves the UI with hot
- * reload, proxying `/api` to it. State goes to `.revu-dev` so a real installation is untouched.
+ * reload, proxying `/api` to it. State goes to `.ravi-dev` so a real installation is untouched.
  */
 import { resolve } from 'node:path';
 import { createServer } from 'vite';
@@ -9,7 +9,7 @@ import { run } from '../src/server/cli.ts';
 const API_PORT = 4784;
 const UI_PORT = 5173;
 
-process.env.REVU_HOME ??= resolve('.revu-dev');
+process.env.RAVI_HOME ??= resolve('.ravi-dev');
 
 await run(['--no-open', '--port', String(API_PORT), ...process.argv.slice(2)], {
   assets: null,

@@ -1,13 +1,13 @@
 #!/bin/sh
-# Installs revu into ~/.revu/bin from a folder that holds revu.mjs and the launchers
+# Installs ravi into ~/.ravi/bin from a folder that holds ravi.mjs and the launchers
 # (a release archive or ./dist after `pnpm build`). Usage: install.sh [source-folder]
 set -eu
 
 SOURCE="${1:-$(dirname "$0")/../dist}"
-TARGET="$HOME/.revu/bin"
+TARGET="$HOME/.ravi/bin"
 
-if [ ! -f "$SOURCE/revu.mjs" ]; then
-  echo "revu.mjs not found in $SOURCE" >&2
+if [ ! -f "$SOURCE/ravi.mjs" ]; then
+  echo "ravi.mjs not found in $SOURCE" >&2
   exit 1
 fi
 if ! command -v node >/dev/null 2>&1; then
@@ -16,8 +16,8 @@ if ! command -v node >/dev/null 2>&1; then
 fi
 
 mkdir -p "$TARGET"
-cp "$SOURCE/revu.mjs" "$SOURCE/revu" "$TARGET/"
-chmod +x "$TARGET/revu"
+cp "$SOURCE/ravi.mjs" "$SOURCE/ravi" "$TARGET/"
+chmod +x "$TARGET/ravi"
 
 echo "Installed to $TARGET"
 case ":$PATH:" in

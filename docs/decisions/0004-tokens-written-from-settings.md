@@ -6,18 +6,18 @@
 
 ## Context
 
-Earlier releases required the user to edit `~/.revu/.env` by hand to add a forge token. That made
+Earlier releases required the user to edit `~/.ravi/.env` by hand to add a forge token. That made
 the first pull request fail with a file-editing step, and it offered no way to keep a separate token
-for one repository or to rotate a host token without restarting revu. The tokens still must never
+for one repository or to rotate a host token without restarting ravi. The tokens still must never
 appear in the UI, logs, exports or the process environment.
 
 ## Decision
 
-`~/.revu/.env` remains the only token store and the only file revu reads. Settings now writes it:
+`~/.ravi/.env` remains the only token store and the only file ravi reads. Settings now writes it:
 
 - **Settings → Accounts** sets or removes the token for `github.com` or `gitlab.com`
   (`GITHUB_TOKEN`, `GITLAB_TOKEN`).
-- **Settings → Repositories** can set a token for one repository (`REVU_TOKEN_<REPOID>`) or
+- **Settings → Repositories** can set a token for one repository (`RAVI_TOKEN_<REPOID>`) or
   explicitly choose the host token for it.
 
 The only writer is `src/server/forges/env-write.ts`. It edits the file line by line so comments,

@@ -1,8 +1,8 @@
-<p align="center"><img src="src/ui/public/brand/logo.svg" width="96" alt="revu logo"></p>
+<p align="center"><img src="src/ui/public/brand/logo.svg" width="96" alt="ravi logo"></p>
 
-# revu
+# ravi
 
-revu is a local code review tool with a GitHub/GitLab-like UI. It reviews local git changes and
+ravi is a local code review tool with a GitHub/GitLab-like UI. It reviews local git changes and
 GitHub.com/GitLab.com pull requests, keeps every comment as a draft, exchanges comments with AI
 agents as one Markdown file, and writes to the forge only when you press **Send**. It ships as a
 single JavaScript file that runs on Node, with the UI embedded.
@@ -27,10 +27,10 @@ single JavaScript file that runs on Node, with the UI embedded.
 
 ## Install
 
-revu needs Node 22.20 or newer and git.
+ravi needs Node 22.20 or newer and git.
 
-Download a release archive and copy `revu.mjs`, `revu` and `revu.cmd` into one folder on your
-`PATH`, or use the installer, which installs revu into `~/.revu/bin`:
+Download a release archive and copy `ravi.mjs`, `ravi` and `ravi.cmd` into one folder on your
+`PATH`, or use the installer, which installs ravi into `~/.ravi/bin`:
 
 ```sh
 ./install/install.sh          # Linux, macOS
@@ -48,27 +48,27 @@ pnpm build
 ./install/install.sh          # or ./install/install.ps1 on Windows
 ```
 
-You can also run the built file directly: `node dist/revu.mjs`.
+You can also run the built file directly: `node dist/ravi.mjs`.
 
 ## Quick start
 
 ```sh
-revu                # open the repository in the current folder
-revu path/to/repo   # open another folder
-revu --help
+ravi                # open the repository in the current folder
+ravi path/to/repo   # open another folder
+ravi --help
 ```
 
-On first run revu opens the dashboard and asks you to add a repository. Choose a local folder or
+On first run ravi opens the dashboard and asks you to add a repository. Choose a local folder or
 paste a GitHub/GitLab URL. A remote repository without a local folder becomes an app-managed
 partial clone; unused clones are removed after the retention period in Settings.
 
-A second `revu` invocation reuses the running server and only opens the browser.
+A second `ravi` invocation reuses the running server and only opens the browser.
 
 ## Tokens and SSH
 
 Open **Settings → Accounts** and save a token for `github.com` or `gitlab.com`. The repository
 connection step in **Settings → Repositories** can store a token for one repository instead.
-Tokens are written to `~/.revu/.env`, only the last four characters are ever shown again, and revu
+Tokens are written to `~/.ravi/.env`, only the last four characters are ever shown again, and ravi
 never reads a token from the process environment.
 
 GitHub fine-grained token scopes:
@@ -80,16 +80,16 @@ GitLab personal access token scope: `api`.
 
 Git transport is chosen per repository:
 
-- **SSH** — revu injects nothing; git uses your own keys and agent.
-- **HTTPS** — revu passes the token to git through `GIT_CONFIG_*` environment variables, never
+- **SSH** — ravi injects nothing; git uses your own keys and agent.
+- **HTTPS** — ravi passes the token to git through `GIT_CONFIG_*` environment variables, never
   through arguments.
 
-Forge APIs always need a token. A repository token can also live in `~/.revu/.env` as
-`REVU_TOKEN_<REPOID>`; Settings writes that variable for you.
+Forge APIs always need a token. A repository token can also live in `~/.ravi/.env` as
+`RAVI_TOKEN_<REPOID>`; Settings writes that variable for you.
 
 ## Notifications
 
-revu polls the connected repositories in the background (5 minutes by default). The inbox has a
+ravi polls the connected repositories in the background (5 minutes by default). The inbox has a
 manual **Check now** action. Filters mute bots, mute authors, restrict notifications to chosen
 authors, and include or exclude text; a preview shows how many recent comments a filter would
 match.
@@ -105,14 +105,14 @@ and add comments in the same shape. The grammar is in
 ## Security model
 
 - The server binds `127.0.0.1` only and checks the `Host` header.
-- API calls need a session cookie; mutating calls also need the `x-revu` header (CSRF).
-- Tokens live only in `~/.revu/.env`; they are never logged, exported or sent to the UI.
+- API calls need a session cookie; mutating calls also need the `x-ravi` header (CSRF).
+- Tokens live only in `~/.ravi/.env`; they are never logged, exported or sent to the UI.
 - Git arguments are passed as an array, never through a shell; paths are validated against the
   repository root.
-- Comment images are served from `~/.revu/data/assets` or through a server-side proxy with an
+- Comment images are served from `~/.ravi/data/assets` or through a server-side proxy with an
   allowlist of forge hosts.
 - Nothing is written to GitHub/GitLab except through Send/Approve with a confirmation. Every Send
-  appends counts only to `~/.revu/data/send-log.jsonl`, never comment bodies.
+  appends counts only to `~/.ravi/data/send-log.jsonl`, never comment bodies.
 
 The full design is in [docs/architecture/overview.md](docs/architecture/overview.md).
 
@@ -126,7 +126,7 @@ pnpm typecheck
 pnpm lint
 pnpm e2e            # Playwright in Microsoft Edge (build first)
 pnpm bench          # server-side benchmark on a throwaway repository
-pnpm build          # dist/revu.mjs + revu and revu.cmd launchers
+pnpm build          # dist/ravi.mjs + ravi and ravi.cmd launchers
 ```
 
 Architecture and decisions start at [docs/index.md](docs/index.md). Rules for AI agents are in
@@ -134,7 +134,7 @@ Architecture and decisions start at [docs/index.md](docs/index.md). Rules for AI
 
 ## License
 
-Copyright (C) 2026 smrodek.xyz. Licensed under the GNU Affero General Public License v3.0 only; see [LICENSE](LICENSE). If you run a modified revu as a network service, you must offer its source to its users.
+Copyright (C) 2026 smrodek.xyz. Licensed under the GNU Affero General Public License v3.0 only; see [LICENSE](LICENSE). If you run a modified ravi as a network service, you must offer its source to its users.
 
 ## Author
 

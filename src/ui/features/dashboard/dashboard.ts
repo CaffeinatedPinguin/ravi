@@ -26,7 +26,7 @@ export function groupPullRequests(pulls: readonly PullRequestSummary[]): PullGro
   return groups;
 }
 
-/** Case-insensitive substring match on the name and the path, like every other filter in revu. */
+/** Case-insensitive substring match on the name and the path, like every other filter in ravi. */
 export function filterRepos<T extends Pick<Repo, 'name' | 'path'>>(repos: readonly T[], query: string): T[] {
   const needle = query.trim().toLowerCase();
   if (needle === '') {

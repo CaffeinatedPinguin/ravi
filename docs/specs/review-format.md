@@ -1,14 +1,14 @@
 # Review Markdown format (v1)
 
 Copy, Save and Import all use one self-explaining text format, so a human or an AI that has never
-seen revu can read a review and add a comment in the same shape. The implementation lives in
+seen ravi can read a review and add a comment in the same shape. The implementation lives in
 `src/server/review/markdown.ts`; the model is `src/shared/review.ts`.
 
 ## Example
 
 ````markdown
 # Code review: github.com/acme/api PR #123
-revu-review v1 · base 9f1c2a7 · head a83e0b1 · action: request changes
+ravi-review v1 · base 9f1c2a7 · head a83e0b1 · action: request changes
 Format: each "##" section is one comment. "path:line (new|old)" is the line in
 the new or old version of the file; the quoted code is context; the comment
 is the "> " text. "## PR" = comment on the whole PR, "### reply" = reply.
@@ -61,5 +61,5 @@ omitted when absent. Commits are shortened to seven characters.
 
 ## Versioning
 
-The second line starts with `revu-review v1`. Any incompatible change to this grammar bumps it to
-`revu-review v2`; v1 stays readable by later releases.
+The second line starts with `ravi-review v1`. Any incompatible change to this grammar bumps it to
+`ravi-review v2`; v1 stays readable by later releases.

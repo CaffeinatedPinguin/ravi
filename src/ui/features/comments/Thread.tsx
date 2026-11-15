@@ -56,7 +56,7 @@ export function ThreadRow({ threads, store, reviewLevel = false }: ThreadRowProp
 
 /**
  * A forge thread, now writable: Reply creates a draft under the thread and the user's own comments
- * get Edit/Delete drafts. Nothing leaves revu until the explicit Send.
+ * get Edit/Delete drafts. Nothing leaves ravi until the explicit Send.
  */
 export function RemoteThread({
   thread,
