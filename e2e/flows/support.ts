@@ -58,7 +58,7 @@ export function createPullRequestFixture(): PullRequestFixture {
   const headSha = git(repoPath, ['rev-parse', 'HEAD']).trim();
 
   // A bare repository served through git's local transport; refs/pull/1/head is what GitHub shows.
-  git(root, ['init', '--bare', '-q', barePath]);
+  git(root, ['init', '--bare', '-q', '-b', 'main', barePath]);
   git(root, [
     '--git-dir',
     barePath,

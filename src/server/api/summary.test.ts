@@ -110,7 +110,7 @@ describe('repository summary', () => {
     const origin = join(root, 'origin.git');
     const work = join(root, 'work');
     mkdirSync(work);
-    git(root, ['init', '--bare', '-q', origin]);
+    git(root, ['init', '--bare', '-q', '-b', 'main', origin]);
     git(work, ['init', '-q', '-b', 'main']);
     writeFileSync(join(work, 'a.txt'), 'one\n');
     git(work, ['add', '.']);
@@ -170,7 +170,7 @@ describe('repository summary', () => {
     const root = temp('summary-remote');
     const origin = join(root, 'origin.git');
     const source = join(root, 'source');
-    git(root, ['init', '--bare', '-q', origin]);
+    git(root, ['init', '--bare', '-q', '-b', 'main', origin]);
     git(root, ['init', '-q', '-b', 'main', source]);
     git(source, ['remote', 'add', 'origin', origin]);
     writeFileSync(join(source, 'a.txt'), 'one\n');
