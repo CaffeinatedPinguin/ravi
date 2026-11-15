@@ -36,7 +36,7 @@ Dependencies point one way: `ui → shared ← server`. Features do not import e
 
 ## Data folder
 
-Everything lives in `~/.ravi` (override with `REVU_HOME`):
+Everything lives in `~/.ravi` (override with `RAVI_HOME`):
 
 | Path | Content |
 |---|---|
