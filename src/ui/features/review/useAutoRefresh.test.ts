@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatUpdatedAgo, shouldReloadOnFocus } from './useAutoRefresh.ts';
+import { formatRefreshedAgo, shouldReloadOnFocus } from './useAutoRefresh.ts';
 
 describe('shouldReloadOnFocus', () => {
   it('keeps the current diff when the repository has not changed', () => {
@@ -11,10 +11,18 @@ describe('shouldReloadOnFocus', () => {
   });
 });
 
-describe('formatUpdatedAgo', () => {
+describe('formatRefreshedAgo', () => {
   it('moves from "just now" to seconds and then minutes', () => {
-    expect(formatUpdatedAgo(10_000, 10_000)).toBe('Updated just now');
-    expect(formatUpdatedAgo(10_000, 10_000 - 42_000)).toBe('Updated 42 s ago');
-    expect(formatUpdatedAgo(10_000, 10_000 - 180_000)).toBe('Updated 3 min ago');
+    expect(formatRefreshedAgo(10_000, 10_000)).toBe('just now');
+    expect(formatRefreshedAgo(10_000, 10_000 - 42_000)).toBe('42 s ago');
+    expect(formatRefreshedAgo(10_000, 10_000 - 180_000)).toBe('3 min ago');
+  });
+
+  it('uses the documented boundaries and never reports a negative age', () => {
+    expect(formatRefreshedAgo(10_000, 10_000 - 4_000)).toBe('just now');
+    expect(formatRefreshedAgo(10_000, 10_000 - 5_000)).toBe('5 s ago');
+    expect(formatRefreshedAgo(10_000, 10_000 - 60_000)).toBe('1 min ago');
+    // A clock that jumps backwards must not render "-2 s ago" in the tooltip.
+    expect(formatRefreshedAgo(10_000, 20_000)).toBe('just now');
   });
 });

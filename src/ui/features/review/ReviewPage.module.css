@@ -212,11 +212,6 @@
   color: var(--text-faint);
 }
 
-.transfer {
-  display: inline-flex;
-  gap: 4px;
-}
-
 /* Covers the page only while files are dragged; pointer events stay off so the composer still
    receives its own image drop. */
 .dropOverlay {
