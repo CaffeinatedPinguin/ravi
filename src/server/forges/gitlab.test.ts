@@ -121,6 +121,7 @@ const CONTRACT_PAGE_2 = `${CONTRACT_PAGE_1}&page=2`;
 const CONTRACT_OPEN = `${API}/projects/${ENCODED}/merge_requests?state=opened&per_page=100`;
 
 const contractFake = fakeFetch({
+  [`GET ${API}/user`]: { json: { username: 'alice' } },
   [`GET ${CONTRACT_PAGE_1}`]: {
     json: [summary(1), summary(2)],
     headers: { link: `<${CONTRACT_PAGE_2}>; rel="next"` },
@@ -163,6 +164,7 @@ describeForgeContract('GitLab', {
 describe('GitLab pull requests', () => {
   it('maps a merge request and its diff refs to the shared model', async () => {
     const { forge } = makeForge({
+      [`GET ${API}/user`]: { json: { username: 'alice' } },
       [`GET ${MR_URL}`]: { json: mergeRequest({ state: 'merged', draft: true }) },
     });
 
@@ -178,7 +180,30 @@ describe('GitLab pull requests', () => {
       headSha: HEAD,
       mergeBaseSha: BASE,
       commentCount: 3,
+      isMine: true,
+      reviewRequested: false,
     });
+  });
+
+  it('marks requested reviews and the current user case-insensitively', async () => {
+    const { forge } = makeForge({
+      [`GET ${API}/user`]: { json: { username: 'Alice' } },
+      [`GET ${CONTRACT_OPEN}`]: {
+        json: [
+          mergeRequest({ iid: 3, author: { username: 'bob' }, reviewers: [{ username: 'alice' }] }),
+          mergeRequest({ iid: 4, author: { username: 'alice' }, reviewers: [] }),
+          mergeRequest({ iid: 5, author: { username: 'bob' }, reviewers: [{ username: 'carol' }] }),
+        ],
+      },
+    });
+
+    const pulls = await forge.listPullRequests(REPO, { state: 'open' });
+
+    expect(pulls.map((pull) => [pull.number, pull.reviewRequested, pull.isMine])).toEqual([
+      [3, true, false],
+      [4, false, true],
+      [5, false, false],
+    ]);
   });
 });
 

@@ -63,6 +63,8 @@ const MergeRequestSchema = z.object({
   web_url: z.string(),
   user_notes_count: z.number().int().nullable().optional(),
   diff_refs: DiffRefsSchema.nullable().optional(),
+  // Present on list answers; used for "waiting for my review" without an extra request.
+  reviewers: z.array(AuthorSchema).default([]),
 });
 type MergeRequest = z.infer<typeof MergeRequestSchema>;
 
@@ -312,19 +314,22 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
       if (listOptions.author !== undefined) {
         query.set('author_username', listOptions.author);
       }
-      const mrs = await http.getAll(`${mergeRequests(repo)}?${query.toString()}`, MergeRequestSchema);
-      return mrs.map(toSummary);
+      const [mrs, login] = await Promise.all([
+        http.getAll(`${mergeRequests(repo)}?${query.toString()}`, MergeRequestSchema),
+        currentUser(),
+      ]);
+      return mrs.map((mr) => toSummary(mr, login));
     },
 
     async getPullRequest(repo: RepoRef, number: number): Promise<PullRequest> {
-      const mr = await readMergeRequest(repo, number);
+      const [mr, login] = await Promise.all([readMergeRequest(repo, number), currentUser()]);
       const refs = mr.diff_refs;
       if (refs === null || refs === undefined) {
         throw new ForgeError(502, 'Merge request has no diff refs');
       }
       rememberRefs(repo, number, mr);
       return {
-        ...toSummary(mr),
+        ...toSummary(mr, login),
         body: mr.description ?? '',
         baseSha: refs.base_sha,
         headSha: refs.head_sha,
@@ -554,7 +559,8 @@ export function createGitLabForge(host: ForgeHost, http: ForgeHttp, options: Git
 
 // ── Mapping helpers ─────────────────────────────────────────────────────────
 
-function toSummary(mr: MergeRequest): PullRequestSummary {
+function toSummary(mr: MergeRequest, login: string): PullRequestSummary {
+  const viewer = login.toLowerCase();
   return {
     number: mr.iid,
     title: mr.title,
@@ -567,6 +573,8 @@ function toSummary(mr: MergeRequest): PullRequestSummary {
     headSha: mr.sha,
     webUrl: mr.web_url,
     commentCount: mr.user_notes_count ?? null,
+    isMine: mr.author.username.toLowerCase() === viewer,
+    reviewRequested: mr.reviewers.some((reviewer) => reviewer.username.toLowerCase() === viewer),
   };
 }
 
