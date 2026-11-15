@@ -184,6 +184,24 @@ export const RepoInfoSchema = z.object({
 });
 export type RepoInfo = z.infer<typeof RepoInfoSchema>;
 
+/** One row of the ref picker; the subject makes a commit searchable by what it changed. */
+export const RefCommitSchema = z.object({
+  sha: z.string(),
+  shortSha: z.string(),
+  subject: z.string(),
+  date: z.string(),
+});
+export type RefCommit = z.infer<typeof RefCommitSchema>;
+
+/** Everything a review can start from: refs are grouped so the picker can show headings. */
+export const RefsSchema = z.object({
+  branches: z.array(z.string()),
+  remoteBranches: z.array(z.string()),
+  tags: z.array(z.string()),
+  commits: z.array(RefCommitSchema),
+});
+export type Refs = z.infer<typeof RefsSchema>;
+
 // ── Remote clones ───────────────────────────────────────────────────────────
 
 export const CloneInfoSchema = z.object({

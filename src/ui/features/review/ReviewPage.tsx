@@ -1,7 +1,7 @@
 /** The review screen for one repository: top bar, review toolbar, file tree and the diff. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
-import { DiffSummarySchema, RepoInfoSchema, RepoListSchema, ReviewExportResponseSchema } from '../../../shared/api.ts';
+import { DiffSummarySchema, RefsSchema, RepoInfoSchema, RepoListSchema, ReviewExportResponseSchema } from '../../../shared/api.ts';
 import type { DiffOptions, DiffTarget } from '../../../shared/api.ts';
 import type { ReviewDocument, ReviewTarget } from '../../../shared/review.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
@@ -9,6 +9,7 @@ import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Brand } from '../../components/Brand.tsx';
+import { Combobox } from '../../components/Combobox.tsx';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
 import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
 import { showToast, ToastHost } from '../../components/Toast.tsx';
@@ -47,6 +48,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
 
   const repos = useAsync('repos', (signal) => apiGet('/api/repos', RepoListSchema, signal));
   const info = useAsync(`info:${repoId}`, (signal) => apiGet(`/api/repos/${repoId}/info`, RepoInfoSchema, signal));
+  const refs = useAsync(`refs:${repoId}`, (signal) => apiGet(`/api/repos/${repoId}/refs`, RefsSchema, signal));
   const summary = useAsync(`diff:${repoId}:${optionsKey}`, () => apiSend('POST', `/api/repos/${repoId}/diff`, options, DiffSummarySchema));
 
   const repo = repos.data?.find((candidate) => candidate.id === repoId);
@@ -296,20 +298,19 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
       <header className={styles.topBar}>
         <Brand />
         <RepoNav repoId={repoId} active="local" showLocal={repo?.kind !== 'remote'} />
-        <select
-          aria-label="Repository"
+        <Combobox
+          label="Repository"
           className={styles.repoSelect}
           value={repoId}
-          onChange={(event) => navigate(`/repo/${event.target.value}`)}
-        >
-          {repos.data?.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.name}
-            </option>
-          ))}
-        </select>
+          options={(repos.data ?? []).map((candidate) => ({
+            value: candidate.id,
+            label: candidate.name,
+            detail: candidate.path,
+          }))}
+          onChange={(id) => navigate(`/repo/${id}`)}
+        />
         {info.data?.branch && ( <span className={styles.branch}>{info.data.branch}</span>)}
-        <TargetPicker key={encodeTarget(target)} target={target} info={info.data} onChange={setTarget} />
+        <TargetPicker key={encodeTarget(target)} target={target} info={info.data} refs={refs.data} onChange={setTarget} />
         <span className={styles.spacer} />
         <IconButton
           icon={document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon'}
