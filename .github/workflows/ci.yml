@@ -1,4 +1,4 @@
-# CI for revu: checks on every push and pull request, Edge e2e on Windows, release archive on version tags.
+# CI for ravi: checks on every push and pull request, Edge e2e on Windows, release archive on version tags.
 # Actions are pinned to full commit SHAs (verified with `git ls-remote` on 2026-11-15).
 name: ci
 
@@ -29,7 +29,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: node dist/revu.mjs --version
+      - run: node dist/ravi.mjs --version
 
   e2e:
     # Microsoft Edge is preinstalled on GitHub's Windows runners; Playwright uses it via channel "msedge".
@@ -65,8 +65,8 @@ jobs:
       # The whole installation is these three files plus Node.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: revu-${{ github.ref_name }}
+          name: ravi-${{ github.ref_name }}
           path: |
-            dist/revu.mjs
-            dist/revu
-            dist/revu.cmd
+            dist/ravi.mjs
+            dist/ravi
+            dist/ravi.cmd
