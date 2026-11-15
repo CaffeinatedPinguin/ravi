@@ -1,18 +1,7 @@
-# ravi docs index
+# ravi documentation
 
-One line per document: `file — what it owns — read when`.
-
-| File | Owns | Read when |
-|---|---|---|
-| [docs/architecture/overview.md](architecture/overview.md) | Runtime model, module layout, data folder, security model | Starting any change |
-| [docs/architecture/forges.md](architecture/forges.md) | Forge strategy, host registry, token and HTTP rules, adding a forge | Changing or adding a forge integration |
-| [docs/decisions/0001-stack-and-distribution.md](decisions/0001-stack-and-distribution.md) | Node + single-file bundle, dependency policy | Changing packaging, runtime or dependencies |
-| [docs/decisions/0004-tokens-written-from-settings.md](decisions/0004-tokens-written-from-settings.md) | Token storage in `~/.ravi/.env`, Settings writes, masking | Changing token storage or forge authentication |
-| [docs/specs/SPEC.md](specs/SPEC.md) | Product scope and the phase checklist | Planning or finishing a phase |
-| [docs/specs/review-format.md](specs/review-format.md) | Comment model and the self-explaining Markdown v1 exchange format | Reading, writing or versioning a review export |
-
-## Rules
-
-- One line per file; no nested lists, no status.
-- Point at the owner of a fact; do not repeat the fact here.
-- Every link resolves in a fresh clone.
+- [Architecture overview](architecture/overview.md) — how the server, the UI and the data folder fit together.
+- [Forge layer](architecture/forges.md) — how ravi talks to GitHub and GitLab and how to add another host.
+- [0001 — Stack and distribution](decisions/0001-stack-and-distribution.md) — why ravi ships as one bundled JavaScript file and which dependencies it allows.
+- [0004 — Tokens written from Settings](decisions/0004-tokens-written-from-settings.md) — where forge tokens are stored and how Settings writes them.
+- [Review Markdown format](specs/review-format.md) — the comment model and the text format used to copy, save and import a review.

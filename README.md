@@ -48,6 +48,11 @@ paste a GitHub/GitLab URL. Application data, including the token file, lives in 
 
 TypeScript, Node, React, Vite, shiki, markdown-it, Zod, Playwright in Microsoft Edge and Vitest.
 
+## Documentation
+
+Architecture, the forge layer and the review Markdown format are in
+[docs/index.md](docs/index.md).
+
 ## Development
 
 ```sh

@@ -4,14 +4,11 @@ ravi is a local code review tool with a GitHub/GitLab-like UI: review local git 
 GitHub.com/GitLab.com pull requests, keep comments as drafts, exchange them with AI agents as
 Markdown, and send them to the forge on demand. It ships as one JavaScript file that runs on Node.
 
-Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only local ones)
-
 ## Read when
 
 | Task | Read |
 |---|---|
 | Understand the runtime, modules or data folder | `docs/architecture/overview.md` |
-| See scope, phases and what is done | `docs/specs/SPEC.md` |
 | Change packaging, runtime or dependencies | `docs/decisions/0001-stack-and-distribution.md` |
 | Change token storage or forge authentication | `docs/decisions/0004-tokens-written-from-settings.md` |
 | Commands, install and usage | `README.md` |
