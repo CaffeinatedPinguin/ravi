@@ -8,6 +8,7 @@ import { apiGet, apiSend } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
+import { Brand } from '../../components/Brand.tsx';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
 import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
 import { showToast, ToastHost } from '../../components/Toast.tsx';
@@ -293,16 +294,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
       onDrop={onDrop}
     >
       <header className={styles.topBar}>
-        <a
-          className={styles.brand}
-          href="/"
-          onClick={(event) => {
-            event.preventDefault();
-            navigate('/');
-          }}
-        >
-          revu
-        </a>
+        <Brand />
         <RepoNav repoId={repoId} active="local" showLocal={repo?.kind !== 'remote'} />
         <select
           aria-label="Repository"

@@ -7,9 +7,9 @@ import { PullRequestStatusSchema, RepoListSchema } from '../../../shared/api.ts'
 import type { ReviewAction } from '../../../shared/forge.ts';
 import type { ReviewDocument } from '../../../shared/review.ts';
 import { apiGet, apiSend, ApiError } from '../../app/api.ts';
-import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
+import { Brand } from '../../components/Brand.tsx';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
 import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
 import type { Shortcut } from '../../components/ShortcutsDialog.tsx';
@@ -350,16 +350,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
   return (
     <div className={page.page}>
       <header className={page.topBar}>
-        <a
-          className={page.brand}
-          href="/"
-          onClick={(event) => {
-            event.preventDefault();
-            navigate('/');
-          }}
-        >
-          revu
-        </a>
+        <Brand />
         <RepoNav repoId={repoId} active="pulls" showLocal={repo?.kind !== 'remote'} />
         <span className={styles.repoName}>{repo?.name ?? repoId}</span>
         <span className={page.spacer} />

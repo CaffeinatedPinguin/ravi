@@ -45,7 +45,19 @@ export const PullRequestStateSchema = z.enum(['open', 'closed', 'merged']);
 /** Lifecycle state reported by the forge. */
 export type PullRequestState = z.infer<typeof PullRequestStateSchema>;
 
-export const PullRequestSummarySchema = z.object({
+/**
+ * Fixtures written before the two viewer flags existed must keep parsing. The preprocess fills
+ * them with false, while the inner schema stays optional so those fixtures also typecheck.
+ */
+const withDefaultFlags = (value: unknown): unknown => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value;
+  }
+  const record = value as Record<string, unknown>;
+  return { ...record, reviewRequested: record.reviewRequested ?? false, isMine: record.isMine ?? false };
+};
+
+const pullSummaryFields = z.object({
   /** Forge-assigned number, stable for the life of the pull request. */
   number: z.number().int().positive(),
   /** Title as shown on the forge. */
@@ -68,10 +80,16 @@ export const PullRequestSummarySchema = z.object({
   webUrl: z.string(),
   /** Number of comments, or null when the forge does not report it cheaply. */
   commentCount: z.number().int().nonnegative().nullable(),
+  /** Whether the token's user is a requested reviewer; missing in old fixtures, read as false. */
+  reviewRequested: z.boolean().optional(),
+  /** Whether the pull request was authored by the token's user; missing means false. */
+  isMine: z.boolean().optional(),
 });
+
+export const PullRequestSummarySchema = z.preprocess(withDefaultFlags, pullSummaryFields);
 export type PullRequestSummary = z.infer<typeof PullRequestSummarySchema>;
 
-export const PullRequestSchema = PullRequestSummarySchema.extend({
+const pullRequestFields = pullSummaryFields.extend({
   /** Markdown description written by the author. */
   body: z.string(),
   /** Commit the pull request is based on. */
@@ -81,6 +99,8 @@ export const PullRequestSchema = PullRequestSummarySchema.extend({
   /** Common ancestor used for the diff, or null when the forge cannot compute it. */
   mergeBaseSha: z.string().nullable(),
 });
+
+export const PullRequestSchema = z.preprocess(withDefaultFlags, pullRequestFields);
 export type PullRequest = z.infer<typeof PullRequestSchema>;
 
 // ── Review threads ──────────────────────────────────────────────────────────

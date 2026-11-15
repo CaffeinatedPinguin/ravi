@@ -38,6 +38,9 @@ const PULL_REQUEST_SCHEMA = z.object({
   head: z.object({ ref: z.string(), sha: z.string() }),
   html_url: z.string(),
   merged_at: z.string().nullable().default(null),
+  // Returned by the list endpoint (and the single-pull endpoint) so the dashboard can separate
+  // "waiting for my review" from "mine" without a second call per pull request.
+  requested_reviewers: z.array(USER_SCHEMA).default([]),
 });
 
 const PULL_REQUEST_DETAILS_SCHEMA = PULL_REQUEST_SCHEMA.extend({
@@ -117,19 +120,23 @@ export function createGitHubForge(host: ForgeHost, http: ForgeHttp): Forge {
     cloneUrl: (repo) => `${host.webUrl}/${repo.project}.git`,
 
     async listPullRequests(repo, options) {
-      const pulls = await http.getAll(
-        `${repoPath(repo)}/pulls?state=${options.state}&per_page=100`,
-        PULL_REQUEST_SCHEMA,
-      );
+      // `isMine` needs the viewer even when the caller did not ask for the author filter.
+      const [pulls, login] = await Promise.all([
+        http.getAll(`${repoPath(repo)}/pulls?state=${options.state}&per_page=100`, PULL_REQUEST_SCHEMA),
+        currentUser(),
+      ]);
       const author = options.author?.toLowerCase();
       return pulls
         .filter((pull) => author === undefined || pull.user.login.toLowerCase() === author)
-        .map(toSummary);
+        .map((pull) => toSummary(pull, login));
     },
 
     async getPullRequest(repo, number) {
-      const pull = await http.get(`${pullsPath(repo, number)}`, PULL_REQUEST_DETAILS_SCHEMA);
-      return toPullRequest(pull);
+      const [pull, login] = await Promise.all([
+        http.get(`${pullsPath(repo, number)}`, PULL_REQUEST_DETAILS_SCHEMA),
+        currentUser(),
+      ]);
+      return toPullRequest(pull, login);
     },
 
     async listThreads(repo, number) {
@@ -446,7 +453,9 @@ export function createGitHubForge(host: ForgeHost, http: ForgeHttp): Forge {
 
 // ── Mapping GitHub payloads to the shared model ─────────────────────────────
 
-function toSummary(pull: PullRequestPayload): PullRequestSummary {
+function toSummary(pull: PullRequestPayload, login: string): PullRequestSummary {
+  const author = pull.user.login.toLowerCase();
+  const viewer = login.toLowerCase();
   return {
     number: pull.number,
     title: pull.title,
@@ -459,12 +468,14 @@ function toSummary(pull: PullRequestPayload): PullRequestSummary {
     headSha: pull.head.sha,
     webUrl: pull.html_url,
     commentCount: null,
+    isMine: author === viewer,
+    reviewRequested: pull.requested_reviewers.some((reviewer) => reviewer.login.toLowerCase() === viewer),
   };
 }
 
-function toPullRequest(pull: PullRequestDetails): PullRequest {
+function toPullRequest(pull: PullRequestDetails, login: string): PullRequest {
   return {
-    ...toSummary(pull),
+    ...toSummary(pull, login),
     body: pull.body ?? '',
     baseSha: pull.base.sha,
     headSha: pull.head.sha,

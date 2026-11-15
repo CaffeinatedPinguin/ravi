@@ -1,0 +1,415 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.topBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+
+.search {
+  width: min(340px, 32vw);
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 24px 40px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.message {
+  max-width: 900px;
+  margin: 48px auto;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.error {
+  max-width: 900px;
+  margin: 0 auto 12px;
+  color: var(--danger);
+}
+
+.topRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 1fr);
+  gap: 24px;
+  max-width: 1040px;
+  margin: 0 auto 24px;
+}
+
+.panel {
+  min-width: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sectionHeader h2,
+.sectionHeader h1 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.count {
+  color: var(--text-faint);
+  font: 11px var(--font-mono);
+}
+
+.repos {
+  max-width: 1040px;
+  margin: 0 auto;
+  border-top: 1px solid var(--border);
+}
+
+.repo {
+  padding: 16px 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.repo[data-active='true'] {
+  margin: 0 -10px;
+  padding-right: 10px;
+  padding-left: 10px;
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+}
+
+.repoHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.repoName {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.repoName a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.repoName a:hover {
+  color: var(--accent);
+}
+
+.path {
+  max-width: 36vw;
+  overflow: hidden;
+  color: var(--text-muted);
+  font: 11px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill {
+  flex: none;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: var(--bg-inset);
+  color: var(--text-muted);
+  font: 11px var(--font-mono);
+}
+
+.connection {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.connection[data-missing='true'] {
+  color: var(--danger);
+}
+
+.repoError {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+  color: var(--danger);
+}
+
+.empty {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.changesLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+.changes {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: 11px var(--font-mono);
+  text-decoration: none;
+}
+
+.changes:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.add {
+  color: var(--add-text);
+}
+
+.del {
+  color: var(--del-text);
+}
+
+.lastCommit {
+  overflow: hidden;
+  color: var(--text-faint);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skeleton {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.skeleton span {
+  height: 10px;
+  border-radius: 4px;
+  background: var(--bg-inset);
+}
+
+.skeleton span:last-child {
+  width: 62%;
+}
+
+.groups {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.group {
+  min-width: 0;
+}
+
+.groupTitle,
+.groupSummary {
+  margin: 0 0 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.groupSummary {
+  cursor: pointer;
+}
+
+.pulls {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.pull {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px 3px 10px;
+}
+
+.pull + .pull {
+  border-top: 1px solid var(--border-muted);
+}
+
+.pullRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pullRow:hover .pullTitle {
+  color: var(--accent);
+}
+
+.pullNumber {
+  flex: none;
+  width: 46px;
+  color: var(--text-muted);
+  font: 11px var(--font-mono);
+}
+
+.pullTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pullMeta {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.starred {
+  color: var(--accent);
+}
+
+.notifications {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notificationRow {
+  width: 100%;
+  display: grid;
+  gap: 1px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.notificationRow:hover .pullTitle {
+  color: var(--accent);
+}
+
+.notificationRow .pullTitle,
+.excerpt {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.excerpt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.inboxTitle {
+  margin: 0;
+  font-size: 16px;
+}
+
+.notification {
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.notification[data-read='false'] .pullTitle {
+  font-weight: 600;
+}
+
+.setupBody {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 32px 24px;
+}
+
+.setupHero {
+  max-width: 620px;
+  text-align: center;
+}
+
+.setupTitle {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.setupLead {
+  margin: 0 auto 20px;
+  max-width: 54ch;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.setupActions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.setupHint {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .topRow {
+    grid-template-columns: 1fr;
+  }
+
+  .search {
+    width: 100%;
+  }
+}

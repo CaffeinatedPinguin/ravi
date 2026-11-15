@@ -1,9 +1,10 @@
 /** App shell: picks the screen from the URL and handles the folder passed by the CLI. */
 import { useEffect, useState } from 'react';
 import { RepoSchema } from '../../shared/api.ts';
+import { DashboardPage } from '../features/dashboard/DashboardPage.tsx';
+import { InboxPage } from '../features/dashboard/InboxPage.tsx';
 import { PullRequestPage } from '../features/pulls/PullRequestPage.tsx';
 import { PullsPage } from '../features/pulls/PullsPage.tsx';
-import { HomePage } from '../features/repos/HomePage.tsx';
 import { ReviewPage } from '../features/review/ReviewPage.tsx';
 import { SettingsPage } from '../features/settings/SettingsPage.tsx';
 import { apiSend } from './api.ts';
@@ -17,11 +18,14 @@ export function App() {
   const pullsMatch = /^\/repo\/([^/]+)\/pulls$/.exec(url.pathname);
   const repoMatch = /^\/repo\/([^/]+)$/.exec(url.pathname);
   const settingsMatch = url.pathname === '/settings';
+  const inboxMatch = url.pathname === '/inbox';
 
   return (
     <SettingsProvider>
       {settingsMatch ? (
         <SettingsPage />
+      ) : inboxMatch ? (
+        <InboxPage />
       ) : pullMatch?.[1] !== undefined ? (
         <PullRequestPage key={pullMatch[0]} repoId={pullMatch[1]} number={Number(pullMatch[2])} />
       ) : pullsMatch?.[1] !== undefined ? (
@@ -29,7 +33,7 @@ export function App() {
       ) : repoMatch?.[1] !== undefined ? (
         <ReviewPage key={repoMatch[1]} repoId={repoMatch[1]} targetParam={url.searchParams.get('t')} />
       ) : (
-        <HomePage notice={openNotice} />
+        <DashboardPage notice={openNotice} />
       )}
     </SettingsProvider>
   );

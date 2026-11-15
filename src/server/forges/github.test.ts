@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PullRequestSummarySchema } from '../../shared/forge.ts';
 import type { DraftOperation, PullRequest, RepoRef } from '../../shared/forge.ts';
 import { describeForgeContract } from './contract.ts';
 import type { ForgeHost } from './forge.ts';
@@ -77,6 +78,7 @@ const pullRequest: PullRequest = {
 // ── Contract ───────────────────────────────────────────────────────────────
 
 const contractFetch = fakeFetch({
+  [`GET ${API}/user`]: { json: { login: 'Octocat' } },
   [`GET ${API}/repos/acme/api/pulls?state=all&per_page=100`]: {
     json: [openPull],
     headers: { link: `<${API}/repos/acme/api/pulls?state=all&per_page=100&page=2>; rel="next"` },
@@ -138,6 +140,7 @@ describe('GitHub reads', () => {
 
   it('lists pull requests across pages, maps merged state and filters the author case-insensitively', async () => {
     const { forge } = make({
+      [`GET ${API}/user`]: { json: { login: 'Octocat' } },
       [`GET ${API}/repos/acme/api/pulls?state=open&per_page=100`]: {
         json: [openPull],
         headers: {
@@ -161,8 +164,10 @@ describe('GitHub reads', () => {
       headSha: 'head222',
       webUrl: 'https://github.com/acme/api/pull/1',
       commentCount: null,
+      isMine: true,
+      reviewRequested: false,
     });
-    expect(pulls[1]).toMatchObject({ number: 2, state: 'merged' });
+    expect(pulls[1]).toMatchObject({ number: 2, state: 'merged', isMine: false });
 
     const filtered = await forge.listPullRequests(repo, { state: 'open', author: 'oCTOcat' });
     expect(filtered.map((pull) => pull.number)).toEqual([1]);
@@ -170,6 +175,7 @@ describe('GitHub reads', () => {
 
   it('reads one pull request with both commit shas, an empty body and the comment total', async () => {
     const { forge } = make({
+      [`GET ${API}/user`]: { json: { login: 'octocat' } },
       [`GET ${API}/repos/acme/api/pulls/7`]: {
         json: { ...openPull, number: 7, body: null, comments: 2, review_comments: 3 },
       },
@@ -184,7 +190,50 @@ describe('GitHub reads', () => {
       headSha: 'head222',
       mergeBaseSha: null,
       commentCount: 5,
+      isMine: true,
+      reviewRequested: false,
     });
+  });
+
+  it('marks requested reviews and the current user case-insensitively', async () => {
+    const { forge } = make({
+      [`GET ${API}/user`]: { json: { login: 'Me' } },
+      [`GET ${API}/repos/acme/api/pulls?state=open&per_page=100`]: {
+        json: [
+          { ...openPull, number: 3, requested_reviewers: [{ login: 'me' }] },
+          { ...openPull, number: 4, user: { login: 'me' }, requested_reviewers: [] },
+          { ...openPull, number: 5, user: { login: 'other' }, requested_reviewers: [{ login: 'someone' }] },
+        ],
+      },
+    });
+
+    const pulls = await forge.listPullRequests(repo, { state: 'open' });
+
+    expect(pulls.map((pull) => [pull.number, pull.reviewRequested, pull.isMine])).toEqual([
+      [3, true, false],
+      [4, false, true],
+      [5, false, false],
+    ]);
+  });
+});
+
+describe('shared pull request model', () => {
+  it('fills the viewer flags with false for fixtures written before them', () => {
+    const parsed = PullRequestSummarySchema.parse({
+      number: 1,
+      title: 'Old fixture',
+      author: 'alice',
+      state: 'open',
+      draft: false,
+      updatedAt: '2026-11-01T10:00:00Z',
+      baseRef: 'main',
+      headRef: 'feature',
+      headSha: 'sha',
+      webUrl: 'https://github.com/acme/api/pull/1',
+      commentCount: null,
+    });
+
+    expect(parsed).toMatchObject({ reviewRequested: false, isMine: false });
   });
 });
 
