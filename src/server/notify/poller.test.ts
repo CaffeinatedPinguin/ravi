@@ -1,11 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { Repo } from '../../shared/api.ts';
 import { SettingsSchema } from '../../shared/api.ts';
 import type { PullRequestSummary, RemoteComment, Thread } from '../../shared/forge.ts';
 import { ForgeError } from '../forges/http.ts';
+import { fakeFetch } from '../forges/testing.ts';
 import { fakeForge } from '../pulls/testing.ts';
 import { resolvePaths } from '../paths.ts';
 import { writeJsonFile } from '../store/json-file.ts';
@@ -219,5 +220,47 @@ describe('pollOnce', () => {
     clock.current += 60_000;
     await pollOnce(paths, deps);
     expect((await listNotifications(paths)).items[0]?.author).toBe('erin');
+  });
+
+  it('polls with the repository token, not the host token', async () => {
+    const paths = await makePaths([repo('a1b2c3d4')]);
+    writeFileSync(
+      paths.envFile,
+      'GITHUB_TOKEN=host-token-111\nREVU_TOKEN_A1B2C3D4=repo-token-222\n',
+    );
+    const fake = fakeFetch({
+      'GET https://api.github.com/user': { json: { login: 'octocat' } },
+      'GET https://api.github.com/repos/acme/api/pulls?state=open&per_page=100': {
+        json: [
+          {
+            number: 7,
+            title: 'Add b',
+            user: { login: 'octocat' },
+            state: 'open',
+            draft: false,
+            updated_at: '2026-11-14T10:00:00Z',
+            base: { ref: 'main', sha: 'b1' },
+            head: { ref: 'feature', sha: 'h1' },
+            html_url: 'https://github.com/acme/api/pull/7',
+            merged_at: null,
+            requested_reviewers: [],
+          },
+        ],
+      },
+      'GET https://api.github.com/repos/acme/api/pulls/7/comments?per_page=100': { json: [] },
+      'GET https://api.github.com/repos/acme/api/issues/7/comments?per_page=100': { json: [] },
+    });
+    vi.stubGlobal('fetch', fake);
+    try {
+      // No `forgeFor` override: the default lookup must select the repository token by itself.
+      await pollOnce(paths, { now: () => new Date(START) });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(fake.calls.length).toBeGreaterThan(0);
+    for (const call of fake.calls) {
+      expect(call.headers.authorization).toBe('Bearer repo-token-222');
+    }
   });
 });

@@ -55,7 +55,7 @@ function defaultForgeLookup(paths: Paths): NotifyForgeLookup {
     if (repo.remote === null) {
       throw new HttpError(400, 'Repository has no forge remote');
     }
-    return forgeFor(paths, repo.remote);
+    return forgeFor(paths, repo.remote, { repoId: repo.id, tokenScope: repo.tokenScope });
   };
 }
 

@@ -15,17 +15,6 @@
   background: var(--bg-subtle);
 }
 
-.brand {
-  color: var(--text);
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  text-decoration: none;
-}
-
-.topTitle {
-  color: var(--text-muted);
-}
-
 .spacer {
   flex: 1;
 }
