@@ -134,7 +134,7 @@ Architecture and decisions start at [docs/index.md](docs/index.md). Rules for AI
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Functional Source License 1.1 (FSL-1.1-MIT). See [LICENSE](LICENSE). Each release becomes MIT licensed two years after it is published.
 
 ## Author
 
