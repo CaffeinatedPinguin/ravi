@@ -39,6 +39,30 @@ export type NotificationSettings = z.infer<typeof NotificationSettingsSchema>;
 /** Parsed here so old settings files (without `notifications`) get every nested default. */
 const defaultNotifications = (): NotificationSettings => NotificationSettingsSchema.parse({});
 
+/** Longest branch name a save accepts; matches the settings row hint. */
+export const MAX_DEFAULT_BASE_BRANCH = 200;
+const FORBIDDEN_BRANCH_CHARS = ['~', '^', ':', '?', '*', '[', '\\'] as const;
+
+/**
+ * A branch name typed in Settings later becomes a git argument, so the ref syntax git rejects is
+ * refused here. Trimming happens before the checks so `" main "` is stored as `main`.
+ */
+export const DefaultBaseBranchSchema = z
+  .string()
+  .transform((value) => value.trim())
+  .pipe(
+    z
+      .string()
+      .min(1, 'Enter a branch name.')
+      .max(MAX_DEFAULT_BASE_BRANCH, `Use at most ${MAX_DEFAULT_BASE_BRANCH} characters.`)
+      .refine((value) => !/\s/.test(value), 'A branch name cannot contain spaces.')
+      .refine((value) => !value.startsWith('-'), 'A branch name cannot start with "-".')
+      .refine(
+        (value) => !value.includes('..') && !FORBIDDEN_BRANCH_CHARS.some((char) => value.includes(char)),
+        'A branch name cannot contain "..", "~", "^", ":", "?", "*", "[" or "\\".',
+      ),
+  );
+
 export const SettingsSchema = z.object({
   viewMode: z.enum(['split', 'unified']).default('unified'),
   ignoreWhitespace: z.boolean().default(false),
@@ -51,6 +75,8 @@ export const SettingsSchema = z.object({
   treeWidth: z.number().int().min(160).max(800).default(300),
   /** Unused partial clones older than this are removed on startup. */
   cloneRetentionDays: z.number().int().min(1).max(3650).default(30),
+  /** Branch a branch comparison starts from; null means detect the repository default. */
+  defaultBaseBranch: DefaultBaseBranchSchema.nullable().default(null),
   notifications: NotificationSettingsSchema.default(defaultNotifications),
 });
 export type Settings = z.infer<typeof SettingsSchema>;

@@ -1,9 +1,11 @@
 /** Chooses what to review: uncommitted work, the staging area, a branch against its base, or a commit range. */
 import { useMemo, useState } from 'react';
 import type { DiffTarget, Refs, RepoInfo } from '../../../shared/api.ts';
+import { useSettings } from '../../app/settings.tsx';
 import { Combobox } from '../../components/Combobox.tsx';
 import type { ComboboxOption } from '../../components/Combobox.tsx';
 import { Button } from '../../components/controls.tsx';
+import { initialBaseBranch } from '../settings/validation.ts';
 import styles from './ReviewPage.module.css';
 
 type TargetPickerProps = {
@@ -23,14 +25,17 @@ const KIND_LABEL: Record<DiffTarget['kind'], string> = {
 };
 
 export function TargetPicker({ target, info, refs, onChange }: TargetPickerProps) {
+  const { settings } = useSettings();
   const [range, setRange] = useState(target.kind === 'range' ? { from: target.from, to: target.to } : { from: '', to: 'HEAD' });
-  const defaultBase = info?.defaultBranch ?? refs?.branches[0] ?? info?.branches[0] ?? 'main';
+  // Settings wins only for a branch this repository actually has; otherwise today's detection.
+  const branches = refs?.branches ?? info?.branches ?? [];
+  const defaultBase = initialBaseBranch(settings.defaultBaseBranch, info?.defaultBranch ?? null, branches);
 
   // The base comparison only makes sense against a branch, so tags and commits stay out of this list.
   const baseOptions = useMemo<ComboboxOption[]>(() => {
-    const branches = refs?.branches ?? info?.branches ?? [];
+    const repoBranches = refs?.branches ?? info?.branches ?? [];
     const options: ComboboxOption[] = [
-      ...branches.map((name) => ({ value: name, label: name, group: 'Branches' })),
+      ...repoBranches.map((name) => ({ value: name, label: name, group: 'Branches' })),
       ...(refs?.remoteBranches ?? []).map((name) => ({ value: name, label: name, group: 'Remote branches' })),
     ];
     const base = target.kind === 'branch' ? target.base : null;
@@ -43,9 +48,9 @@ export function TargetPicker({ target, info, refs, onChange }: TargetPickerProps
 
   // The range picker gets everything: a commit id typed by hand is still accepted.
   const rangeOptions = useMemo<ComboboxOption[]>(() => {
-    const branches = refs?.branches ?? info?.branches ?? [];
+    const repoBranches = refs?.branches ?? info?.branches ?? [];
     return [
-      ...branches.map((name) => ({ value: name, label: name, group: 'Branches' })),
+      ...repoBranches.map((name) => ({ value: name, label: name, group: 'Branches' })),
       ...(refs?.remoteBranches ?? []).map((name) => ({ value: name, label: name, group: 'Remote branches' })),
       ...(refs?.tags ?? []).map((name) => ({ value: name, label: name, group: 'Tags' })),
       ...(refs?.commits ?? []).map((commit) => ({
@@ -59,7 +64,12 @@ export function TargetPicker({ target, info, refs, onChange }: TargetPickerProps
 
   const selectKind = (kind: DiffTarget['kind']) => {
     if (kind === 'branch') {
-      onChange({ kind, base: defaultBase });
+      // While `info` is still loading, fall back to a branch that exists in the loaded refs list;
+      // a repository with no branch at all cannot compare against a base, so keep the target.
+      const base = defaultBase ?? info?.branch ?? branches[0] ?? null;
+      if (base !== null) {
+        onChange({ kind, base });
+      }
     } else if (kind === 'range') {
       onChange({ kind, from: range.from || 'HEAD~1', to: range.to || 'HEAD', mergeBase: false });
     } else {
