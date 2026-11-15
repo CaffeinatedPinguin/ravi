@@ -134,7 +134,7 @@ Architecture and decisions start at [docs/index.md](docs/index.md). Rules for AI
 
 ## License
 
-Functional Source License 1.1 (FSL-1.1-MIT). See [LICENSE](LICENSE). Each release becomes MIT licensed two years after it is published.
+Source-available under the PolyForm Shield License 1.0.0. See [LICENSE](LICENSE). Anyone may use revu, including inside companies, but not to offer a product or service that competes with it.
 
 ## Author
 
