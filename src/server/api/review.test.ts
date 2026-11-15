@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import type { ReviewDocument } from '../../shared/review.ts';
 import { Router } from '../http/router.ts';
@@ -51,7 +51,7 @@ function call(router: Router, method: string, path: string, payload: unknown): P
 }
 
 describe('POST /api/reviews/export', () => {
-  it('quotes exactly the comment lines and turns an asset link into an absolute path', async () => {
+  beforeAll(async () => {
     git(['init', '-b', 'main']);
     writeFileSync(join(repo, 'a.txt'), 'one\ntwo\nthree\nfour\nfive\n');
     git(['add', '.']);
@@ -59,7 +59,9 @@ describe('POST /api/reviews/export', () => {
     await writeJsonFile(join(paths.data, 'repos.json'), [
       { id: REPO_ID, path: repo, name: 'repo', lastUsedAt: '2026-11-14T10:00:00.000Z' },
     ]);
+  });
 
+  it('quotes exactly the comment lines and turns an asset link into an absolute path', async () => {
     const assetId = `${'a'.repeat(64)}.png`;
     const document: ReviewDocument = {
       version: 1,
@@ -146,5 +148,69 @@ describe('POST /api/reviews/export', () => {
 
     expect(response.markdown).toContain(join(paths.assets, assetId));
     expect(response.markdown.split(`asset:${assetId}`).length - 1).toBe(2);
+  });
+});
+
+describe('POST /api/reviews/import', () => {
+  it('merges an unchanged export with its reply as skipped, not edited', async () => {
+    // The import route validates paths against the current diff, so make a.txt an uncommitted change.
+    writeFileSync(join(repo, 'a.txt'), 'one\ntwo\nthree\nfour\nfive\nsix\n');
+    const document: ReviewDocument = {
+      version: 1,
+      target: { kind: 'local', repoPath: repo, target: 'uncommitted' },
+      baseSha: null,
+      headSha: null,
+      action: null,
+      summary: null,
+      comments: [
+        {
+          id: 'l-root',
+          parentId: null,
+          path: 'a.txt',
+          side: 'new',
+          line: 3,
+          startLine: null,
+          body: 'root body',
+          author: null,
+          state: 'draft',
+          createdAt: '2026-11-14T10:00:00.000Z',
+          updatedAt: '2026-11-14T10:00:00.000Z',
+          codeContext: null,
+          outdated: false,
+        },
+        {
+          id: 'l-reply',
+          parentId: 'l-root',
+          path: 'a.txt',
+          side: 'new',
+          line: 3,
+          startLine: null,
+          body: 'reply body',
+          author: null,
+          state: 'draft',
+          createdAt: '2026-11-14T10:00:00.000Z',
+          updatedAt: '2026-11-14T10:00:00.000Z',
+          codeContext: null,
+          outdated: false,
+        },
+      ],
+    };
+
+    const router = new Router();
+    registerReviewRoutes(router, { paths });
+    const exported = (await call(router, 'POST', '/api/reviews/export', {
+      repoId: REPO_ID,
+      diffTarget: { kind: 'uncommitted' },
+      document,
+    })) as { markdown: string };
+
+    const imported = (await call(router, 'POST', '/api/reviews/import', {
+      repoId: REPO_ID,
+      diffTarget: { kind: 'uncommitted' },
+      document,
+      markdown: exported.markdown,
+    })) as { report: { added: number; edited: number; skipped: number } };
+
+    expect(imported.report).toMatchObject({ added: 0, edited: 0, skipped: 2 });
   });
 });

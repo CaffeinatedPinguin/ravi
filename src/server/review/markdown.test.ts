@@ -154,6 +154,54 @@ describe('toMarkdown / fromMarkdown', () => {
     expect(result.comments.map(pick)).toEqual(doc.comments.map(pick));
   });
 
+  it('exports only the comment code block and treats a fence under a reply as context on import', () => {
+    const doc: ReviewDocument = {
+      version: 1,
+      target: { kind: 'local', repoPath: 'C:/repo', target: 'uncommitted' },
+      baseSha: null,
+      headSha: null,
+      action: null,
+      summary: null,
+      comments: [
+        comment({ id: 'l-root', path: 'src/a.ts', line: 4, body: 'root body', codeContext: 'const a = 1' }),
+        comment({
+          id: 'l-reply',
+          parentId: 'l-root',
+          path: 'src/a.ts',
+          line: 4,
+          body: 'reply body',
+          codeContext: 'not part of a reply',
+        }),
+      ],
+    };
+
+    const markdown = toMarkdown(doc);
+    // One fenced block means an open and a close; the reply adds none.
+    expect(markdown.split('```').length - 1).toBe(2);
+    expect(markdown).toContain('### reply · id l-reply\n> reply body');
+
+    const roundTrip = fromMarkdown(markdown);
+    expect(roundTrip.errors).toEqual([]);
+    expect(roundTrip.comments.map(pick)).toEqual(doc.comments.map(pick));
+
+    // A hand-written file may still put a fence under a reply; import must not swallow it as body.
+    const handwritten = [
+      '# Code review: local C:/repo (uncommitted)',
+      'revu-review v1',
+      '## src/a.ts:4 (new) · id l-root',
+      '> root body',
+      '### reply · id l-reply',
+      '```ts',
+      'const a = 1',
+      '```',
+      '> reply body',
+    ].join('\n');
+    const imported = fromMarkdown(handwritten);
+    expect(imported.errors).toEqual([]);
+    expect(imported.comments[0]?.body).toBe('root body');
+    expect(imported.comments[1]?.body).toBe('reply body');
+  });
+
   it('re-imports an edited export: an edited draft keeps its id and an appended section is new', () => {
     const doc: ReviewDocument = {
       version: 1,
