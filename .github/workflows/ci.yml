@@ -1,4 +1,4 @@
-# CI for ravi: checks on every push and pull request, Edge e2e on Windows, release archive on version tags.
+# CI for ravi: lint, typecheck, unit tests and build on every push and pull request; release archive on version tags.
 # Actions are pinned to full commit SHAs (verified with `git ls-remote` on 2026-11-15).
 name: ci
 
