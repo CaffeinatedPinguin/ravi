@@ -39,4 +39,4 @@ Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only loc
 ## Never
 
 - Commit `.env` files or tokens (enforced by pre-commit TruffleHog hook)
-- Add `node_modules` or extra files to the release; the release is `ravi.mjs`, `ravi`, `ravi.cmd` (enforced by `scripts/finish-build.ts`). The build also writes one one-line compatibility entry that the unchanged orchestrator gate still invokes.
+- Add `node_modules` or extra files to the release; the release is `ravi.mjs`, `ravi`, `ravi.cmd` (enforced by `scripts/finish-build.ts`).
