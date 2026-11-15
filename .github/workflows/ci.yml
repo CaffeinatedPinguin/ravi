@@ -1,53 +1,60 @@
-# CI for ravi: lint, typecheck, unit tests and build on every push and pull request; release archive on version tags.
-# Actions are pinned to full commit SHAs (verified with `git ls-remote` on 2026-11-15).
+# CI caller: verification (Ubuntu + Windows) and release are delegated to the shared templates workflows.
 name: ci
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
-  pull_request:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to verify (checked out as refs/pull/<n>/head)
+        required: false
+        default: ""
+        type: string
 
-permissions:
-  contents: read
+# Tag and branch runs share the SHA-based group: a release tag cancels the CI
+# run for the same commit, while CI never cancels an in-progress release.
+concurrency:
+  group: ci-${{ github.sha }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/tags/') }}
+
+permissions: {}
 
 jobs:
-  check:
+  verify:
+    name: verify
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
-      - run: node dist/ravi.mjs --version
+    uses: CaffeinatedPinguin/templates/.github/workflows/node-ci.yml@880535ab7c051ec7a72651057a78628b727ab285
+    with:
+      runs-on: ${{ matrix.os }}
+      # A manual run can verify an untrusted PR head without a pull_request trigger.
+      ref: ${{ github.event.inputs.pr && format('refs/pull/{0}/head', github.event.inputs.pr) || '' }}
+      scripts: lint typecheck test build smoke
+      node-version-file: .nvmrc
+      # ravi has no Docker image, so the dist artifact is not uploaded.
+      artifact-name: ""
+      # Only the Ubuntu variant contributes the three release files.
+      assets-name: ${{ matrix.os == 'ubuntu-latest' && 'ravi' || '' }}
+      assets-path: |
+        dist/ravi.mjs
+        dist/ravi
+        dist/ravi.cmd
+      check-release-tag: true
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      # The whole installation is these three files plus Node.
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: ravi-${{ github.ref_name }}
-          path: |
-            dist/ravi.mjs
-            dist/ravi
-            dist/ravi.cmd
+    name: release
+    needs: verify
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    uses: CaffeinatedPinguin/templates/.github/workflows/release.yml@880535ab7c051ec7a72651057a78628b727ab285
+    with:
+      title-prefix: "ravi "
+      assets-artifact: ravi
+      assets-glob: ravi.mjs ravi ravi.cmd

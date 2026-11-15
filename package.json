@@ -14,6 +14,7 @@
   "scripts": {
     "dev": "node --watch scripts/dev.ts",
     "build": "vite build && vite build --config vite.server.config.ts && node scripts/finish-build.ts",
+    "smoke": "node dist/ravi.mjs --version",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
