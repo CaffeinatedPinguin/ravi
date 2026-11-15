@@ -11,11 +11,11 @@
  */
 import { mkdir, readdir, realpath, rename, rm, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import type { CloneInfo } from '../../shared/api.ts';
+import type { CloneInfo, ConnectionCheck, Repo, RepoTokenScope, RepoTransport } from '../../shared/api.ts';
 import type { ForgeKind, RepoRef } from '../../shared/forge.ts';
 import { readForgeTokens } from '../forges/env.ts';
 import type { ForgeHost } from '../forges/forge.ts';
-import { HOSTS } from '../forges/registry.ts';
+import { HOSTS, resolveToken } from '../forges/registry.ts';
 import { HttpError } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
 import { cloneFolder, listRepos, removeRepo } from '../store/repos.ts';
@@ -39,12 +39,41 @@ export type CloneOptions = {
   cloneUrl?: string;
   /** Test seam: observes the clone child process so the token can be checked in the env, not in argv. */
   onSpawn?: (info: SpawnInfo) => void;
+  /** How the clone reaches the forge; defaults to the historical HTTPS behaviour. */
+  transport?: RepoTransport;
+  /** Repository whose own token should be used before the host token. */
+  repoId?: string;
+  tokenScope?: RepoTokenScope;
 };
 
-/** Environment that authenticates git for this repository; an empty object means an anonymous call. */
-export async function cloneEnv(paths: Paths, ref: RepoRef): Promise<NodeJS.ProcessEnv> {
-  const host = hostFor(ref);
-  const token = (await readForgeTokens(paths.envFile)).get(host.tokenEnv);
+export type CloneEnvOptions = {
+  transport?: RepoTransport;
+  repoId?: string;
+  tokenScope?: RepoTokenScope;
+};
+
+/**
+ * Environment that authenticates git for this repository; an empty object means an anonymous call.
+ * SSH deliberately gets nothing: git uses the user's own keys/agent and revu never handles them.
+ */
+export async function cloneEnv(
+  paths: Paths,
+  ref: RepoRef | null,
+  options: CloneEnvOptions = {},
+): Promise<NodeJS.ProcessEnv> {
+  if (options.transport === 'ssh') {
+    return {};
+  }
+  const host = ref === null ? undefined : hostFor(ref);
+  if (host === undefined) {
+    return {};
+  }
+  const token = resolveToken(
+    await readForgeTokens(paths.envFile),
+    host.tokenEnv,
+    options.repoId,
+    options.tokenScope,
+  );
   if (token === undefined) {
     // Public repositories clone and fetch anonymously; only the user's `.env` can add a token.
     return {};
@@ -59,12 +88,26 @@ export async function cloneEnv(paths: Paths, ref: RepoRef): Promise<NodeJS.Proce
   };
 }
 
+/** Browser-facing HTTPS clone URL; the token is injected through the environment, never embedded. */
+export function httpsCloneUrl(ref: RepoRef): string {
+  const host = hostFor(ref);
+  return `${host.webUrl}/${ref.project}.git`;
+}
+
+/** SSH form git understands natively; the user's SSH agent supplies the key. */
+export function sshCloneUrl(ref: RepoRef): string {
+  return `git@${ref.host}:${ref.project}.git`;
+}
+
+export function remoteUrlFor(ref: RepoRef, transport: RepoTransport): string {
+  return transport === 'ssh' ? sshCloneUrl(ref) : httpsCloneUrl(ref);
+}
+
 /**
  * Clones `ref` into its clone folder through a temporary directory, so a failed clone never leaves a
  * half repository behind. The URL comes from the registry, never from text the user pasted.
  */
 export async function cloneRemote(paths: Paths, ref: RepoRef, options: CloneOptions = {}): Promise<void> {
-  const host = hostFor(ref);
   const destination = cloneFolder(paths, ref);
   const parent = dirname(destination);
   await mkdir(parent, { recursive: true });
@@ -73,11 +116,16 @@ export async function cloneRemote(paths: Paths, ref: RepoRef, options: CloneOpti
     return;
   }
 
+  const transport = options.transport ?? 'https';
   const temporary = `${destination}.${process.pid}.${Date.now()}.tmp`;
-  const url = options.cloneUrl ?? `${host.webUrl}/${ref.project}.git`;
+  const url = options.cloneUrl ?? remoteUrlFor(ref, transport);
   try {
     await git(parent, ['clone', '--bare', '--filter=blob:none', '--no-tags', url, temporary], {
-      env: await cloneEnv(paths, ref),
+      env: await cloneEnv(paths, ref, {
+        transport,
+        ...(options.repoId === undefined ? {} : { repoId: options.repoId }),
+        ...(options.tokenScope === undefined ? {} : { tokenScope: options.tokenScope }),
+      }),
       onSpawn: options.onSpawn,
     });
     await rename(temporary, destination);
@@ -94,6 +142,61 @@ export async function fetchRemote(root: string, env: NodeJS.ProcessEnv = {}): Pr
   } catch (error) {
     throw gitHttpError(error);
   }
+}
+
+/**
+ * "Test connection" for git: a cheap `ls-remote` with the transport the user chose.
+ * A local folder has no repository URL revu owns, so it checks the folder's own `origin`;
+ * a remote clone is checked against the URL matching the selected transport.
+ */
+export async function testGitConnection(
+  paths: Paths,
+  repo: Repo,
+  options: { timeoutMs?: number; onSpawn?: (info: SpawnInfo) => void } = {},
+): Promise<ConnectionCheck> {
+  const transport = repo.transport ?? 'https';
+  const target = repo.kind === 'remote' && repo.remote !== null ? remoteUrlFor(repo.remote, transport) : 'origin';
+  const env = await cloneEnv(paths, repo.remote, {
+    transport,
+    repoId: repo.id,
+    tokenScope: repo.tokenScope,
+  });
+  try {
+    const output = await withTimeout(
+      git(repo.path, ['ls-remote', '--heads', target], {
+        env,
+        ...(options.onSpawn === undefined ? {} : { onSpawn: options.onSpawn }),
+      }),
+      options.timeoutMs ?? 20_000,
+      'Git connection check',
+    );
+    return {
+      ok: true,
+      message: output.length === 0 ? 'Git remote is reachable (no branches)' : 'Git remote is reachable',
+    };
+  } catch (error) {
+    return { ok: false, message: gitHttpError(error).message };
+  }
+}
+
+/**
+ * The exec helper has no timeout option of its own (it is shared by local, fast commands), so a
+ * network-bound check races a timer. The child is not awaited after that; git exits on its own.
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, what: string): Promise<T> {
+  return new Promise((resolvePromise, reject) => {
+    const timer = setTimeout(() => reject(new HttpError(504, `${what} timed out after ${Math.round(timeoutMs / 1000)} s`)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolvePromise(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
 }
 
 /**

@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import {
   ForgeCapabilitiesSchema,
+  ForgeStatusSchema,
   PullRequestSchema,
   PullRequestStateSchema,
   RepoRefSchema,
@@ -75,6 +76,13 @@ export type {
 
 // ── Repositories ────────────────────────────────────────────────────────────
 
+/** How git talks to the forge: the user's own keys, or a token over HTTPS. */
+export const RepoTransportSchema = z.enum(['ssh', 'https']);
+export type RepoTransport = z.infer<typeof RepoTransportSchema>;
+/** Where the token of a repository lives in `~/.revu/.env`. */
+export const RepoTokenScopeSchema = z.enum(['repo', 'host']);
+export type RepoTokenScope = z.infer<typeof RepoTokenScopeSchema>;
+
 export const RepoSchema = z.object({
   id: z.string(),
   /** Absolute path of the working tree, or of the bare clone for a remote repository. */
@@ -85,19 +93,89 @@ export const RepoSchema = z.object({
   kind: z.enum(['local', 'remote']).default('local'),
   /** Forge repository for a remote clone; local folders fill it from `origin` when connected. */
   remote: RepoRefSchema.nullable().default(null),
+  /** Old remotes were cloned over HTTPS, so that is the safe default for a legacy entry. */
+  transport: RepoTransportSchema.optional(),
+  /** Default to a repository token; the host token is the explicit "use for all" choice. */
+  tokenScope: RepoTokenScopeSchema.optional(),
 });
 export type Repo = z.infer<typeof RepoSchema>;
 
 export const RepoListSchema = z.array(RepoSchema);
+
+/**
+ * What the settings screen sees: the stored repository plus masked token state. A token value
+ * never crosses this boundary; `tokenHint` is only the last four characters.
+ */
+export const RepoViewSchema = RepoSchema.extend({
+  hasToken: z.boolean(),
+  tokenHint: z.string().nullable(),
+});
+export type RepoView = z.infer<typeof RepoViewSchema>;
+export const RepoViewListSchema = z.array(RepoViewSchema);
+
 export const AddRepoRequestSchema = z.object({ path: z.string().min(1) });
 /** A repository URL the user pasted; only a registered forge host is accepted. */
-export const AddRemoteRepoRequestSchema = z.object({ url: z.string().min(1).max(2048) });
+export const AddRemoteRepoRequestSchema = z.object({
+  url: z.string().min(1).max(2048),
+  transport: RepoTransportSchema.default('https'),
+  tokenScope: RepoTokenScopeSchema.default('repo'),
+  /** Absent means "leave the stored token alone"; null is not sent when adding. */
+  token: z.string().min(1).max(512).optional(),
+});
 export const ScanRequestSchema = z.object({ path: z.string().min(1) });
 /** Absolute paths of git working trees found under a folder. */
 export const ScanResultSchema = z.array(z.string());
 /** Sub-folders of a path, for the folder picker. */
 export const DirListSchema = z.object({ path: z.string(), dirs: z.array(z.string()) });
 export type DirList = z.infer<typeof DirListSchema>;
+
+/** A token the user typed, or null to remove it. Never echoed back. */
+export const TokenInputSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .refine((value) => !/[\r\n]/.test(value), { message: 'A token must be a single line' });
+
+export const RepoConnectionRequestSchema = z.object({
+  transport: RepoTransportSchema,
+  tokenScope: RepoTokenScopeSchema,
+  /** Absent keeps the stored token; null removes the token of the selected scope. */
+  token: TokenInputSchema.nullable().optional(),
+});
+export type RepoConnectionRequest = z.infer<typeof RepoConnectionRequestSchema>;
+
+export const ConnectionCheckSchema = z.object({
+  ok: z.boolean(),
+  /** Safe to show: git and forge errors are scrubbed of credentials before they get here. */
+  message: z.string(),
+});
+export type ConnectionCheck = z.infer<typeof ConnectionCheckSchema>;
+
+export const ApiConnectionCheckSchema = ConnectionCheckSchema.extend({
+  /** Login the token belongs to, when the forge answered. */
+  user: z.string().optional(),
+});
+export type ApiConnectionCheck = z.infer<typeof ApiConnectionCheckSchema>;
+
+export const TestConnectionResponseSchema = z.object({
+  git: ConnectionCheckSchema,
+  api: ApiConnectionCheckSchema,
+});
+export type TestConnectionResponse = z.infer<typeof TestConnectionResponseSchema>;
+
+/** Host token state for the Accounts section; `tokenHint` is only the last four characters. */
+export const ForgeStatusViewSchema = ForgeStatusSchema.extend({
+  tokenHint: z.string().nullable(),
+});
+export type ForgeStatusView = z.infer<typeof ForgeStatusViewSchema>;
+export const ForgeStatusViewListSchema = z.array(ForgeStatusViewSchema);
+
+export const ForgeTokenRequestSchema = z.object({ token: TokenInputSchema.nullable() });
+export type ForgeTokenRequest = z.infer<typeof ForgeTokenRequestSchema>;
+
+/** The system folder dialog answers a path, or null when the user cancelled. */
+export const PickFolderResponseSchema = z.object({ path: z.string().nullable() });
+export type PickFolderResponse = z.infer<typeof PickFolderResponseSchema>;
 
 export const RepoInfoSchema = z.object({
   branch: z.string().nullable(),

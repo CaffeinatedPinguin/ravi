@@ -9,7 +9,10 @@ import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { Button, Segmented, Toggle } from '../../components/controls.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
+import { AccountsSettingsSection } from './AccountsSection.tsx';
 import { debounce } from './debounce.ts';
+import { RepositoriesSection } from './RepositoriesSection.tsx';
+import { Section } from './Section.tsx';
 import styles from './SettingsPage.module.css';
 import { validateListEntry } from './validation.ts';
 
@@ -88,6 +91,9 @@ export function SettingsPage() {
             />
           </Row>
         </Section>
+
+        <RepositoriesSection />
+        <AccountsSettingsSection />
 
         <Section title="Review">
           <div className={styles.row}>
@@ -223,15 +229,6 @@ export function SettingsPage() {
         </Section>
       </main>
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className={styles.section} aria-labelledby={`settings-${title.replace(/\s+/g, '-').toLowerCase()}`}>
-      <h2 id={`settings-${title.replace(/\s+/g, '-').toLowerCase()}`}>{title}</h2>
-      {children}
-    </section>
   );
 }
 

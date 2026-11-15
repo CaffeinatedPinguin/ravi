@@ -176,3 +176,181 @@
   color: var(--text-muted);
   font-size: 12px;
 }
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sectionHead h2 {
+  margin: 0;
+}
+
+.repoList,
+.accountList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.repoItem,
+.accountItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.repoMain,
+.accountName {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.repoActions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.mono {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.badgeOn,
+.badgeOff {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.badgeOn {
+  border-color: var(--add-text);
+  color: var(--add-text);
+}
+
+.badgeOff {
+  color: var(--text-faint);
+}
+
+.textInput {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.accountItem .textInput {
+  flex: 1;
+  min-width: 120px;
+  max-width: 260px;
+}
+
+.wizard {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.wizardHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.wizardHead h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.wizardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wizardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stepTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.radioRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.resultOk {
+  color: var(--add-text);
+}
+
+.resultFail {
+  color: var(--danger);
+}
+
