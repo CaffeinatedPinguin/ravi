@@ -21,7 +21,8 @@ requests, with comments that can be exchanged with AI agents and sent to the for
 - Switch between connected repositories and local folders.
 - Mark a pull request to review later.
 - Remember settings, connected repositories, local folders and the review-later list.
-- Tokens only from `~/.revu/.env`.
+- Tokens only from `~/.revu/.env`; Settings → Accounts and the repository connection step write
+  that file.
 - Remote repositories without a local folder use an app-managed partial clone that can be cleaned up.
 - New forges can be added as one strategy file plus one registry entry.
 
@@ -34,14 +35,20 @@ requests, with comments that can be exchanged with AI agents and sent to the for
 ## Phases
 
 - [x] 0 — Skeleton: repo, tooling, docs, single-file build, launchers, CLI opens the app.
-- [ ] 1 — Local diff: connect folders, diff targets, file list and stats, tree, virtualized split/unified
+- [x] 1 — Local diff: connect folders, diff targets, file list and stats, tree, virtualized split/unified
       renderer, highlighting worker, expand context, whole file, ignore whitespace, persistent settings.
-- [ ] 2 — Local comments and the Markdown format: add, edit, delete, reply, images, outdated; Copy / Save / Import.
-- [ ] 3 — Forge read: strategy + registry, tokens, remote repositories, partial clones and cleanup,
+- [x] 2 — Local comments and the Markdown format: add, edit, delete, reply, images, outdated; Copy / Save / Import.
+- [x] 3 — Forge read: strategy + registry, tokens, remote repositories, partial clones and cleanup,
       pull request list, review later, pull request diff, threads, conversation tab, link mode.
-- [ ] 4 — Forge write: draft outbox, Send with Comment / Approve / Request changes, partial failure and retry,
+- [x] 4 — Forge write: draft outbox, Send with Comment / Approve / Request changes, partial failure and retry,
       GitLab image upload.
-- [ ] 5 — Performance and release: benchmark on a generated huge repository, tuning, smoke tests on
-      three operating systems, release archive, README.
+- [x] 5 — Performance and release: benchmark on a generated huge repository, tuning, smoke tests on
+      Linux and Windows, release archive, README.
 
 Each phase ends with `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build` and a run of the built file.
+
+## Known gaps
+
+- GitHub does not accept comment images through its API, so image upload is local and GitLab only.
+- Only github.com and gitlab.com are registered; self-hosted instances are not supported in v1.
+- macOS is not covered yet; browser tests run in Edge on Windows.

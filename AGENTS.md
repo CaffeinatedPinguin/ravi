@@ -13,6 +13,7 @@ Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only loc
 | Understand the runtime, modules or data folder | `docs/architecture/overview.md` |
 | See scope, phases and what is done | `docs/specs/SPEC.md` |
 | Change packaging, runtime or dependencies | `docs/decisions/0001-stack-and-distribution.md` |
+| Change token storage or forge authentication | `docs/decisions/0004-tokens-written-from-settings.md` |
 | Commands, install and usage | `README.md` |
 
 ## Local rules
@@ -23,7 +24,7 @@ Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only loc
 - Server code must run under Node's type stripping: erasable TypeScript only, relative imports end in `.ts`.
 - `src/shared/` is the only contract between server and UI; every payload has a Zod schema there.
 - Nothing is written to a forge except through the explicit Send action; all other edits stay drafts.
-- Tokens come only from `~/.revu/.env`; never read them from the environment, never write or expose them.
+- Tokens live only in `~/.revu/.env`; Settings writes them there, revu never reads them from the environment, and only the last four characters are shown again.
 - Run git through the helpers in `src/server/git/`; never build a shell command string.
 - Comment the "why" (forge API quirks, git behaviour, performance), not the "what".
 - UI and review logic ask a forge for `capabilities`, never for its kind.
@@ -32,6 +33,7 @@ Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only loc
 
 - `pnpm test` — show command and output
 - `pnpm typecheck && pnpm lint` — show command and output
+- `pnpm e2e` — show command and output
 - `pnpm build && node dist/revu.mjs --version` — show command and output
 
 ## Never

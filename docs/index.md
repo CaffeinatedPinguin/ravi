@@ -7,6 +7,7 @@ One line per document: `file — what it owns — read when`.
 | [docs/architecture/overview.md](architecture/overview.md) | Runtime model, module layout, data folder, security model | Starting any change |
 | [docs/architecture/forges.md](architecture/forges.md) | Forge strategy, host registry, token and HTTP rules, adding a forge | Changing or adding a forge integration |
 | [docs/decisions/0001-stack-and-distribution.md](decisions/0001-stack-and-distribution.md) | Node + single-file bundle, dependency policy | Changing packaging, runtime or dependencies |
+| [docs/decisions/0004-tokens-written-from-settings.md](decisions/0004-tokens-written-from-settings.md) | Token storage in `~/.revu/.env`, Settings writes, masking | Changing token storage or forge authentication |
 | [docs/specs/SPEC.md](specs/SPEC.md) | Product scope and the phase checklist | Planning or finishing a phase |
 | [docs/specs/review-format.md](specs/review-format.md) | Comment model and the self-explaining Markdown v1 exchange format | Reading, writing or versioning a review export |
 
