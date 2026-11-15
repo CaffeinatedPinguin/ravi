@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Local code review tool with a GitHub/GitLab-like UI for local git changes and pull requests.",
   "author": "smrodek.xyz (https://smrodek.xyz)",
-  "license": "PolyForm-Shield-1.0.0",
+  "license": "AGPL-3.0-only",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.25.0",

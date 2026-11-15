@@ -134,7 +134,7 @@ Architecture and decisions start at [docs/index.md](docs/index.md). Rules for AI
 
 ## License
 
-Source-available under the PolyForm Shield License 1.0.0. See [LICENSE](LICENSE). Anyone may use revu, including inside companies, but not to offer a product or service that competes with it.
+Copyright (C) 2026 smrodek.xyz. Licensed under the GNU Affero General Public License v3.0 only; see [LICENSE](LICENSE). If you run a modified revu as a network service, you must offer its source to its users.
 
 ## Author
 
