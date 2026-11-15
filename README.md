@@ -3,34 +3,30 @@
 # ravi
 
 ravi is a local code review tool with a GitHub/GitLab-like UI. It reviews local git changes and
-GitHub.com/GitLab.com pull requests, keeps every comment as a draft, exchanges comments with AI
-agents as one Markdown file, and writes to the forge only when you press **Send**. It ships as a
-single JavaScript file that runs on Node, with the UI embedded.
+GitHub.com/GitLab.com pull requests, keeps comments as drafts until you press **Send**, and ships as
+one JavaScript file that runs on Node with the UI embedded.
 
 ## Features
 
-- **Dashboard** — connected repositories, local changes, pull requests waiting for your review,
-  your own pull requests, other open ones, and a review-later list.
-- **Local review** — uncommitted, staged, unstaged, branch against base and commit ranges, with a
-  file tree, split/unified view, syntax highlighting, ignore whitespace, expandable context and the
-  whole file.
-- **Pull request review** — GitHub.com and GitLab.com, file threads and the pull request
-  conversation, review-later, and a three-dot diff like the forge's "Files changed" view.
-- **Comments** — drafts, replies, edits, images, comments on the pull request itself, outdated
-  markers, and Approve / Request changes.
-- **Markdown v1** — Copy, Save and Import one self-explaining file for AI agents; see
-  [the review format](docs/specs/review-format.md).
+- **Dashboard** — connected repositories, local changes, pull requests waiting for your review, your
+  own pull requests and a review-later list.
+- **Local review** — uncommitted, staged, unstaged, branch against base and commit ranges; a file
+  tree, split or unified view, syntax highlighting, ignore whitespace and expandable context.
+- **Pull request review** — GitHub.com and GitLab.com, file threads, the conversation, review-later
+  and a three-dot diff like the forge's "Files changed" view.
+- **Comments** — drafts, replies, edits, images, outdated markers and Approve / Request changes.
+- **Markdown v1** — Copy, Save and Import one self-explaining file for AI agents.
 - **Notifications** — a background poller with author and text filters and a filter preview.
 - **Security** — a loopback-only server, session cookie, CSRF header, strict security headers, a
   server image proxy, and tokens that never reach the browser.
 - **Performance** — virtualized diff rendering that stays smooth with thousands of changed files.
 
-## Install
+## Install and run
 
 ravi needs Node 22.20 or newer and git.
 
-Download a release archive and copy `ravi.mjs`, `ravi` and `ravi.cmd` into one folder on your
-`PATH`, or use the installer, which installs ravi into `~/.ravi/bin`:
+Download a release and copy `ravi.mjs`, `ravi` and `ravi.cmd` into one folder on your `PATH`, or run
+the installer, which installs ravi into `~/.ravi/bin`:
 
 ```sh
 ./install/install.sh          # Linux, macOS
@@ -40,83 +36,19 @@ Download a release archive and copy `ravi.mjs`, `ravi` and `ravi.cmd` into one f
 ./install/install.ps1         # Windows
 ```
 
-To build from source instead:
-
 ```sh
-pnpm install
-pnpm build
-./install/install.sh          # or ./install/install.ps1 on Windows
+ravi --help                   # options
+ravi                          # open the repository in the current folder
 ```
 
-You can also run the built file directly: `node dist/ravi.mjs`.
+On first run ravi opens the dashboard and asks you to add a repository: choose a local folder or
+paste a GitHub/GitLab URL. Application data, including the token file, lives in `~/.ravi`.
 
-## Quick start
+## Built with
 
-```sh
-ravi                # open the repository in the current folder
-ravi path/to/repo   # open another folder
-ravi --help
-```
+TypeScript, Node, React, Vite, shiki, markdown-it, Zod, Playwright in Microsoft Edge and Vitest.
 
-On first run ravi opens the dashboard and asks you to add a repository. Choose a local folder or
-paste a GitHub/GitLab URL. A remote repository without a local folder becomes an app-managed
-partial clone; unused clones are removed after the retention period in Settings.
-
-A second `ravi` invocation reuses the running server and only opens the browser.
-
-## Tokens and SSH
-
-Open **Settings → Accounts** and save a token for `github.com` or `gitlab.com`. The repository
-connection step in **Settings → Repositories** can store a token for one repository instead.
-Tokens are written to `~/.ravi/.env`, only the last four characters are ever shown again, and ravi
-never reads a token from the process environment.
-
-GitHub fine-grained token scopes:
-
-- **Pull requests**: read and write
-- **Contents**: read
-
-GitLab personal access token scope: `api`.
-
-Git transport is chosen per repository:
-
-- **SSH** — ravi injects nothing; git uses your own keys and agent.
-- **HTTPS** — ravi passes the token to git through `GIT_CONFIG_*` environment variables, never
-  through arguments.
-
-Forge APIs always need a token. A repository token can also live in `~/.ravi/.env` as
-`RAVI_TOKEN_<REPOID>`; Settings writes that variable for you.
-
-## Notifications
-
-ravi polls the connected repositories in the background (5 minutes by default). The inbox has a
-manual **Check now** action. Filters mute bots, mute authors, restrict notifications to chosen
-authors, and include or exclude text; a preview shows how many recent comments a filter would
-match.
-
-## Markdown for AI agents
-
-**Copy** puts the whole review on the clipboard, **Save** downloads it as a `*.review.md` file, and
-**Import** merges a file, pasted text or a dropped file back into the review. The format is plain
-Markdown with one `##` section per comment and a quoted code context, so an AI agent can read it
-and add comments in the same shape. The grammar is in
-[docs/specs/review-format.md](docs/specs/review-format.md).
-
-## Security model
-
-- The server binds `127.0.0.1` only and checks the `Host` header.
-- API calls need a session cookie; mutating calls also need the `x-ravi` header (CSRF).
-- Tokens live only in `~/.ravi/.env`; they are never logged, exported or sent to the UI.
-- Git arguments are passed as an array, never through a shell; paths are validated against the
-  repository root.
-- Comment images are served from `~/.ravi/data/assets` or through a server-side proxy with an
-  allowlist of forge hosts.
-- Nothing is written to GitHub/GitLab except through Send/Approve with a confirmation. Every Send
-  appends counts only to `~/.ravi/data/send-log.jsonl`, never comment bodies.
-
-The full design is in [docs/architecture/overview.md](docs/architecture/overview.md).
-
-## Develop
+## Development
 
 ```sh
 pnpm install
@@ -129,13 +61,41 @@ pnpm bench          # server-side benchmark on a throwaway repository
 pnpm build          # dist/ravi.mjs + ravi and ravi.cmd launchers
 ```
 
-Architecture and decisions start at [docs/index.md](docs/index.md). Rules for AI agents are in
-[AGENTS.md](AGENTS.md).
+## Security
+
+ravi runs locally and holds forge tokens, so it is built security-first: the server binds
+`127.0.0.1`, checks the `Host` header, requires a session cookie, adds a CSRF header to mutating
+calls, passes git arguments as an array, and keeps tokens in `~/.ravi/.env` only. To report a
+vulnerability, follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-Copyright (C) 2026 smrodek.xyz. Licensed under the GNU Affero General Public License v3.0 only; see [LICENSE](LICENSE). If you run a modified ravi as a network service, you must offer its source to its users.
+Copyright (C) 2026 smrodek.xyz. Licensed under the GNU Affero General Public License v3.0 only; see
+[LICENSE](LICENSE).
 
 ## Author
 
 Made by [smrodek.xyz](https://smrodek.xyz).
+
+## Open-source packages
+
+| Package | Purpose | Repository |
+|---|---|---|
+| `@tanstack/react-virtual` | Virtualized lists for large diffs | [TanStack/virtual](https://github.com/TanStack/virtual) |
+| `markdown-it` | Markdown rendering for comments and review files | [markdown-it/markdown-it](https://github.com/markdown-it/markdown-it) |
+| `react` | UI library | [react/react](https://github.com/react/react) |
+| `react-dom` | DOM renderer for React | [react/react](https://github.com/react/react) |
+| `shiki` | Syntax highlighting | [shikijs/shiki](https://github.com/shikijs/shiki) |
+| `zod` | Schema validation for the API contract | [colinhacks/zod](https://github.com/colinhacks/zod) |
+| `@playwright/test` | Browser end-to-end tests in Edge | [microsoft/playwright](https://github.com/microsoft/playwright) |
+| `@types/markdown-it` | TypeScript types for markdown-it | [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) |
+| `@types/node` | TypeScript types for Node | [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) |
+| `@types/react` | TypeScript types for React | [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) |
+| `@types/react-dom` | TypeScript types for React DOM | [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) |
+| `@vitejs/plugin-react` | Vite plugin for React | [vitejs/vite-plugin-react](https://github.com/vitejs/vite-plugin-react) |
+| `eslint` | JavaScript and TypeScript linter | [eslint/eslint](https://github.com/eslint/eslint) |
+| `eslint-plugin-react-hooks` | ESLint rules for React Hooks | [facebook/react](https://github.com/facebook/react) |
+| `typescript` | Type checker and compiler | [microsoft/TypeScript](https://github.com/microsoft/TypeScript) |
+| `typescript-eslint` | TypeScript support for ESLint | [typescript-eslint/typescript-eslint](https://github.com/typescript-eslint/typescript-eslint) |
+| `vite` | Dev server and bundler | [vitejs/vite](https://github.com/vitejs/vite) |
+| `vitest` | Unit test runner | [vitest-dev/vitest](https://github.com/vitest-dev/vitest) |
