@@ -8,6 +8,8 @@ import { apiSend } from '../../app/api.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { Brand } from '../../components/Brand.tsx';
+import { Combobox } from '../../components/Combobox.tsx';
+import type { ComboboxOption } from '../../components/Combobox.tsx';
 import { Button, Segmented, Toggle } from '../../components/controls.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { AccountsSettingsSection } from './AccountsSection.tsx';
@@ -15,9 +17,17 @@ import { debounce } from './debounce.ts';
 import { RepositoriesSection } from './RepositoriesSection.tsx';
 import { Section } from './Section.tsx';
 import styles from './SettingsPage.module.css';
-import { validateListEntry } from './validation.ts';
+import { validateBaseBranch, validateListEntry } from './validation.ts';
 
 const messageOf = (reason: unknown): string => (reason instanceof Error ? reason.message : 'Something went wrong');
+
+/** Empty value stands for Automatic (stored as null), because the combobox is a text field. */
+const DEFAULT_BASE_OPTIONS: ComboboxOption[] = [
+  { value: '', label: 'Automatic' },
+  { value: 'main', label: 'main', group: 'Common branches' },
+  { value: 'master', label: 'master', group: 'Common branches' },
+  { value: 'develop', label: 'develop', group: 'Common branches' },
+];
 
 export function SettingsPage() {
   const { settings, update } = useSettings();
@@ -121,6 +131,7 @@ export function SettingsPage() {
               onChange={(linkMode) => update({ linkMode })}
             />
           </Row>
+          <DefaultBaseBranchRow />
         </Section>
 
         <Section title="Notifications">
@@ -232,6 +243,56 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
       </span>
       {children}
     </div>
+  );
+}
+
+function DefaultBaseBranchRow() {
+  const { settings, update } = useSettings();
+  const [error, setError] = useState<string | null>(null);
+
+  const choose = (raw: string): void => {
+    if (raw === '') {
+      setError(null);
+      update({ defaultBaseBranch: null });
+      return;
+    }
+    const result = validateBaseBranch(raw);
+    if (!result.ok) {
+      // Keep the stored setting; an invalid name would only fail later in git.
+      setError(result.message);
+      return;
+    }
+    setError(null);
+    update({ defaultBaseBranch: result.value });
+  };
+
+  return (
+    <>
+      <div className={styles.row}>
+        <span className={styles.rowText}>
+          <span className={styles.rowLabel}>Default base branch</span>
+          <span className={styles.hint}>
+            Used as the base when you compare against a branch. Repositories without that branch fall back to their own
+            default.
+          </span>
+        </span>
+        <div style={{ width: 180 }}>
+          <Combobox
+            label="Default base branch"
+            value={settings.defaultBaseBranch ?? ''}
+            options={DEFAULT_BASE_OPTIONS}
+            allowCustom
+            placeholder="Automatic"
+            onChange={choose}
+          />
+        </div>
+      </div>
+      {error !== null && (
+        <p className={styles.fieldError} role="alert">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 

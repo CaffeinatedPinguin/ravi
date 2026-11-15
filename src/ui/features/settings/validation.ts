@@ -1,7 +1,8 @@
 /**
- * Settings list validation. The limits come from the shared contract, so an entry the UI accepts
- * is exactly an entry the server accepts: trim first, then count characters and logins.
+ * Settings validation: notification filter entries and the default base branch. The rules come from
+ * the shared contract, so an entry the UI accepts is exactly an entry the server accepts.
  */
+import { DefaultBaseBranchSchema } from '../../../shared/api.ts';
 import { AUTHOR_PATTERN, MAX_FILTER_ENTRIES, MAX_FILTER_TEXT } from '../../../shared/notify.ts';
 
 export type EntryResult = { ok: true; value: string } | { ok: false; message: string };
@@ -28,4 +29,28 @@ export function validateListEntry(kind: 'author' | 'text', raw: string, existing
     return { ok: false, message: 'Already in the list.' };
   }
   return { ok: true, value };
+}
+
+/** Uses the shared schema, so the message shown here and the value the server accepts cannot drift. */
+export function validateBaseBranch(raw: string): EntryResult {
+  const parsed = DefaultBaseBranchSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? 'Enter a valid branch name.' };
+  }
+  return { ok: true, value: parsed.data };
+}
+
+/**
+ * Base a branch comparison starts from. A configured branch is used only when this repository has
+ * it, so a review never asks git for a branch that is not there; otherwise the repository default.
+ */
+export function initialBaseBranch(
+  setting: string | null,
+  defaultBranch: string | null,
+  branches: readonly string[],
+): string | null {
+  if (setting !== null && branches.includes(setting)) {
+    return setting;
+  }
+  return defaultBranch;
 }
