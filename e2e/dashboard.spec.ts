@@ -4,7 +4,8 @@
  * server so no request leaves the machine.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { removeTree } from './support/fixture.ts';
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -86,7 +87,7 @@ function emptyFixture(): Fixture {
   mkdirSync(repoPath);
   mkdirSync(home);
   writeFileSync(join(home, '.env'), 'GITHUB_TOKEN=e2e-token\n');
-  return { root, repoPath, home, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { root, repoPath, home, cleanup: () => removeTree(root) };
 }
 
 test.describe('dashboard', () => {

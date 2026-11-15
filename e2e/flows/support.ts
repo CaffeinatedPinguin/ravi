@@ -3,7 +3,8 @@
  * remote (so `git fetch` never leaves the machine), session opening and a live screenshot helper.
  */
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { removeTree } from '../support/fixture.ts';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import type { Page } from '@playwright/test';
@@ -72,7 +73,7 @@ export function createPullRequestFixture(): PullRequestFixture {
   // The stored forge remote comes from this URL; the actual fetch is redirected below.
   git(repoPath, ['remote', 'add', 'origin', 'https://github.com/e2e/sample.git']);
 
-  return { root, repoPath, home, barePath, baseSha, headSha, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { root, repoPath, home, barePath, baseSha, headSha, cleanup: () => removeTree(root) };
 }
 
 /**
@@ -94,7 +95,7 @@ export function emptyHomeFixture(): Fixture {
   const home = join(root, 'home');
   mkdirSync(repoPath);
   mkdirSync(home);
-  return { root, repoPath, home, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { root, repoPath, home, cleanup: () => removeTree(root) };
 }
 
 /** A minimal git repository with one commit, used as the folder picked in the first-run wizard. */

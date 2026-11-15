@@ -76,5 +76,13 @@ export function createFixture(): Fixture {
   git('mv', 'src/old-name.ts', 'src/new-name.ts');
   file('src/untracked.ts', 'export const untracked = true;\n');
 
-  return { root, repoPath, home, cleanup: () => rmSync(root, { recursive: true, force: true }) };
+  return { root, repoPath, home, cleanup: () => removeTree(root) };
+}
+
+/**
+ * Windows keeps handles on files for a moment after a git or server process exits, so a plain
+ * recursive delete fails with EBUSY. Retrying a few times clears that without hiding real errors.
+ */
+export function removeTree(path: string): void {
+  rmSync(path, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }

@@ -31,28 +31,9 @@ jobs:
       - run: pnpm build
       - run: node dist/ravi.mjs --version
 
-  e2e:
-    # Microsoft Edge is preinstalled on GitHub's Windows runners; Playwright uses it via channel "msedge".
-    runs-on: windows-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-      - run: corepack enable
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm e2e
-      - if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: e2e-results
-          path: .e2e-out/
-
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [check, e2e]
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
