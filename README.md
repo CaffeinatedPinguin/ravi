@@ -66,6 +66,11 @@ pnpm bench          # server-side benchmark on a throwaway repository
 pnpm build          # dist/ravi.mjs + ravi and ravi.cmd launchers
 ```
 
+CI runs on every pull request and on `main`, and the single required check is `ci-required`.
+Dependabot keeps the GitHub Actions and npm/pnpm dependencies up to date. Report bugs and feature
+requests through the issue forms; pull requests from outside contributors are not accepted (only
+collaborators can open them), see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Security
 
 ravi runs locally and holds forge tokens, so it is built security-first: the server binds
