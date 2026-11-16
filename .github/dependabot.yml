@@ -3,6 +3,7 @@
 # (new versions "sit" for a while - protection against freshly hijacked packages).
 # Security updates arrive immediately, regardless of schedule and groups.
 version: 2
+# Security updates are grouped into one pull request per ecosystem; each major version update stays separate.
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -15,6 +16,9 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
         update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
     labels: [dependencies]
     commit-message:
       prefix: chore
@@ -33,6 +37,9 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
         update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
     labels: [dependencies]
     commit-message:
       prefix: chore
