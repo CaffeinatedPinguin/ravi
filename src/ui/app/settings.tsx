@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { SettingsSchema } from '../../shared/api.ts';
 import type { Settings } from '../../shared/api.ts';
 import { apiGet, apiSend } from './api.ts';
+import { errorMessage } from './errors.ts';
 
 type SettingsContextValue = {
   settings: Settings;
@@ -19,7 +20,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     apiGet('/api/settings', SettingsSchema)
       .then(setSettings)
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Could not load settings'));
+      .catch((reason: unknown) => setError(errorMessage(reason, 'Could not load settings')));
   }, []);
 
   useEffect(() => {

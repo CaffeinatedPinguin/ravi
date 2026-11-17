@@ -9,6 +9,7 @@
 import { ReviewDocumentSchema } from '../../../shared/review.ts';
 import type { CommentSide, ReviewComment, ReviewDocument, ReviewTarget } from '../../../shared/review.ts';
 import { apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import type { SaveStatus } from './types.ts';
 
 const SAVE_DELAY = 800;
@@ -93,7 +94,7 @@ export class ReviewStore {
       this.saveError = null;
     } catch (reason) {
       this.status = 'error';
-      this.saveError = message(reason);
+      this.saveError = errorMessage(reason, 'Could not save the review');
     }
     this.changed();
   }
@@ -382,7 +383,7 @@ export class ReviewStore {
       })
       .catch((reason: unknown) => {
         this.status = 'error';
-        this.saveError = message(reason);
+        this.saveError = errorMessage(reason, 'Could not save the review');
       })
       .finally(() => {
         this.saving = null;
@@ -398,10 +399,6 @@ export class ReviewStore {
       listener();
     }
   }
-}
-
-function message(reason: unknown): string {
-  return reason instanceof Error ? reason.message : 'Could not save the review';
 }
 
 function randomId(): string {

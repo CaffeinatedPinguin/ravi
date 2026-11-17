@@ -14,7 +14,8 @@ Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only loc
 | Change packaging, runtime or dependencies | `docs/decisions/0001-stack-and-distribution.md` |
 | Change the installers or the release files | `docs/decisions/0005-per-os-installers.md` |
 | Change token storage or forge authentication | `docs/decisions/0004-tokens-written-from-settings.md` |
-| Commands, install and usage | `README.md` |
+| Install and usage | `README.md` |
+| Development commands | `## Verify` below |
 
 ## Local rules
 

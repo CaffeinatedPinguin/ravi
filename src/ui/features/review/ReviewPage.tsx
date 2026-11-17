@@ -5,6 +5,7 @@ import { DiffSummarySchema, RefsSchema, RepoInfoSchema, RepoListSchema, ReviewEx
 import type { DiffOptions, DiffTarget } from '../../../shared/api.ts';
 import type { ReviewDocument, ReviewTarget } from '../../../shared/review.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
@@ -138,7 +139,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         const markdown = await readImportFile(file);
         openImport({ markdown, fileName: file.name });
       } catch (reason) {
-        showToast({ message: reason instanceof Error ? reason.message : 'Could not read the file' });
+        showToast({ message: errorMessage(reason, 'Could not read the file') });
       }
     },
     [openImport],
@@ -211,7 +212,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
       await navigator.clipboard.writeText(exported.markdown);
       showToast({ message: `Copied ${exported.count} ${exported.count === 1 ? 'comment' : 'comments'} for AI` });
     } catch (reason) {
-      showToast({ message: reason instanceof Error ? reason.message : 'Could not copy the review' });
+      showToast({ message: errorMessage(reason, 'Could not copy the review') });
     }
   }, [hasContent, exportReview]);
 
@@ -226,7 +227,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
       }
       downloadMarkdown(reviewFileName(repoName, encodeTarget(target)), exported.markdown);
     } catch (reason) {
-      showToast({ message: reason instanceof Error ? reason.message : 'Could not save the review' });
+      showToast({ message: errorMessage(reason, 'Could not save the review') });
     }
   }, [hasContent, exportReview, repoName, target]);
 

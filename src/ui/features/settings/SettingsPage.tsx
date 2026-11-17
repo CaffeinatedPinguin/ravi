@@ -5,6 +5,7 @@ import { NotificationPreviewSchema } from '../../../shared/api.ts';
 import type { NotificationFilters, NotificationPreview, NotificationSettings } from '../../../shared/api.ts';
 import { MAX_FILTER_ENTRIES } from '../../../shared/notify.ts';
 import { apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { Brand } from '../../components/Brand.tsx';
@@ -17,8 +18,6 @@ import { debounce } from './debounce.ts';
 import { Section } from './Section.tsx';
 import styles from './SettingsPage.module.css';
 import { validateBaseBranch, validateListEntry } from './validation.ts';
-
-const messageOf = (reason: unknown): string => (reason instanceof Error ? reason.message : 'Something went wrong');
 
 /** Empty value stands for Automatic (stored as null), because the combobox is a text field. */
 const DEFAULT_BASE_OPTIONS: ComboboxOption[] = [
@@ -407,7 +406,7 @@ function Preview({ filters }: { filters: NotificationFilters }) {
             setPreview(result);
             setError(null);
           })
-          .catch((reason: unknown) => setError(messageOf(reason)))
+          .catch((reason: unknown) => setError(errorMessage(reason, 'Something went wrong')))
           .finally(() => setBusy(false));
       }, 350),
     [],

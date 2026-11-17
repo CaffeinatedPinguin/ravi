@@ -1,6 +1,7 @@
 /** The comment editor: Markdown with a preview tab, keyboard submit and image attachments. */
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, DragEvent, KeyboardEvent } from 'react';
+import { errorMessage } from '../../app/errors.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
 import { uploadImage } from './assets.ts';
 import styles from './Comments.module.css';
@@ -56,7 +57,7 @@ export function Composer({ initialBody = '', submitLabel, onSubmit, onCancel, au
       const id = await uploadImage(file);
       insertAtCursor(`![${file.name}](asset:${id})`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not upload the image');
+      setError(errorMessage(reason, 'Could not upload the image'));
     } finally {
       setUploading(false);
     }

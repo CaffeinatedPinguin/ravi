@@ -13,14 +13,13 @@ import {
 } from '../../../shared/api.ts';
 import type { RepoTransport, RepoView, TestConnectionResponse } from '../../../shared/api.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
 import { Section } from '../settings/Section.tsx';
 import styles from '../settings/SettingsPage.module.css';
 import { FoundRepos } from './FoundRepos.tsx';
 import { connectedKeys, scanFolder } from './scan.ts';
-
-const messageOf = (reason: unknown): string => (reason instanceof Error ? reason.message : 'Something went wrong');
 
 export function RepositoriesSection() {
   const repos = useAsync('repos', (signal) => apiGet('/api/repos', RepoViewListSchema, signal));
@@ -35,7 +34,7 @@ export function RepositoriesSection() {
     try {
       await action();
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Something went wrong'));
     }
   };
 
@@ -196,7 +195,7 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
         setPath(answer.path);
       }
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Something went wrong'));
     } finally {
       setPicking(false);
     }
@@ -209,7 +208,7 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
     try {
       setFound(await scanFolder(path.trim()));
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Something went wrong'));
     } finally {
       setScanning(false);
     }
@@ -264,7 +263,7 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
     try {
       await action();
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Something went wrong'));
     } finally {
       setBusy(false);
     }

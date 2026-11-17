@@ -10,6 +10,7 @@ import { NotificationListSchema, RepoListSchema, ReviewLaterListSchema } from '.
 import type { Repo, ReviewLaterEntry } from '../../../shared/api.ts';
 import type { ForgeStatus, PullRequestSummary } from '../../../shared/forge.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { navigate } from '../../app/router.ts';
 import { useAsync } from '../../app/useAsync.ts';
 import { Brand } from '../../components/Brand.tsx';
@@ -65,7 +66,7 @@ function DashboardView({ repos }: { repos: readonly Repo[] }) {
   const later = useAsync('review-later', (signal) => apiGet('/api/review-later', ReviewLaterListSchema, signal));
   const [refreshKey, setRefreshKey] = useState(0);
   const [starBusy, setStarBusy] = useState<string | null>(null);
-  const [starError, setStarError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [laterRefreshing, setLaterRefreshing] = useState(false);
 
   const pullEnabled = useMemo(() => {
@@ -132,7 +133,7 @@ function DashboardView({ repos }: { repos: readonly Repo[] }) {
   const toggleStar = async (repoId: string, number: number): Promise<void> => {
     const key = `${repoId}:${number}`;
     setStarBusy(key);
-    setStarError(null);
+    setActionError(null);
     try {
       if (starred.has(key)) {
         await apiSend('DELETE', `/api/review-later/${repoId}/${number}`, undefined, z.undefined());
@@ -141,7 +142,7 @@ function DashboardView({ repos }: { repos: readonly Repo[] }) {
       }
       later.reload();
     } catch (reason) {
-      setStarError(reason instanceof Error ? reason.message : 'Could not update Review later');
+      setActionError(errorMessage(reason, 'Could not update Review later'));
     } finally {
       setStarBusy(null);
     }
@@ -149,12 +150,12 @@ function DashboardView({ repos }: { repos: readonly Repo[] }) {
 
   const refreshLater = async (): Promise<void> => {
     setLaterRefreshing(true);
-    setStarError(null);
+    setActionError(null);
     try {
       await apiSend('POST', '/api/review-later/refresh', {}, ReviewLaterListSchema);
       later.reload();
     } catch (reason) {
-      setStarError(reason instanceof Error ? reason.message : 'Could not refresh Review later');
+      setActionError(errorMessage(reason, 'Could not refresh Review later'));
     } finally {
       setLaterRefreshing(false);
     }
@@ -196,9 +197,9 @@ function DashboardView({ repos }: { repos: readonly Repo[] }) {
 
       <main className={styles.body}>
         <h1 className={styles.srOnly}>ravi</h1>
-        {starError !== null && (
+        {actionError !== null && (
           <p className={styles.error} role="alert">
-            {starError}
+            {actionError}
           </p>
         )}
 

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { NotificationListSchema } from '../../../shared/api.ts';
 import type { Notification, NotificationList } from '../../../shared/api.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { navigate } from '../../app/router.ts';
 import { desktopNotification, notificationTarget, notificationsToShow, rememberShown } from './model.ts';
 
@@ -19,9 +20,6 @@ export type NotificationsState = {
   markRead: (ids: string[]) => Promise<void>;
   markAll: () => Promise<void>;
 };
-
-const messageOf = (reason: unknown): string =>
-  reason instanceof Error ? reason.message : 'Could not load notifications';
 
 export function useNotifications(desktopEnabled: boolean): NotificationsState {
   const [list, setList] = useState<NotificationList>({ items: [], unread: 0 });
@@ -57,7 +55,7 @@ export function useNotifications(desktopEnabled: boolean): NotificationsState {
       apply(await apiGet('/api/notifications', NotificationListSchema));
       setError(null);
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Could not load notifications'));
     } finally {
       setLoading(false);
     }
@@ -93,7 +91,7 @@ export function useNotifications(desktopEnabled: boolean): NotificationsState {
       apply(await apiSend('POST', '/api/notifications/poll', {}, NotificationListSchema));
       setError(null);
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Could not load notifications'));
     } finally {
       setChecking(false);
     }
@@ -104,7 +102,7 @@ export function useNotifications(desktopEnabled: boolean): NotificationsState {
       // The answer is a full inbox; a comment that arrived meanwhile is treated like any poll.
       apply(await apiSend('POST', '/api/notifications/read', { ids }, NotificationListSchema));
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Could not load notifications'));
     }
   }, [apply]);
 
@@ -112,7 +110,7 @@ export function useNotifications(desktopEnabled: boolean): NotificationsState {
     try {
       apply(await apiSend('POST', '/api/notifications/read', { all: true }, NotificationListSchema));
     } catch (reason) {
-      setError(messageOf(reason));
+      setError(errorMessage(reason, 'Could not load notifications'));
     }
   }, [apply]);
 

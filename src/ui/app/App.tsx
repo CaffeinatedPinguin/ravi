@@ -13,6 +13,7 @@ import { scanFolder } from '../features/repositories/scan.ts';
 import { ReviewPage } from '../features/review/ReviewPage.tsx';
 import { SettingsPage } from '../features/settings/SettingsPage.tsx';
 import { apiSend } from './api.ts';
+import { errorMessage } from './errors.ts';
 import { navigate, useUrl } from './router.ts';
 import { SettingsProvider } from './settings.tsx';
 
@@ -90,7 +91,7 @@ function useOpenFolder(folder: string | null): { found: FoundInFolder | null; di
         const repo = await apiSend('POST', '/api/repos', { path: folder }, RepoSchema);
         navigate(`/repo/${repo.id}`, { replace: true });
       } catch (reason: unknown) {
-        const message = reason instanceof Error ? reason.message : 'Could not open the folder';
+        const message = errorMessage(reason, 'Could not open the folder');
         // A failed scan means "nothing to offer", so both outcomes end with the same toast.
         const inside = await scanFolder(folder).catch(() => []);
         if (inside.length > 0) {

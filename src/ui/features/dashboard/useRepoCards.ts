@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Repo } from '../../../shared/api.ts';
 import type { PullRequestSummary } from '../../../shared/forge.ts';
 import { apiGet } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { PullRequestListSchema } from '../pulls/schemas.ts';
 import { mapLimit } from './dashboard.ts';
 import { RepoSummarySchema } from './schema.ts';
@@ -39,7 +40,7 @@ export function useRepoCards(
         }
       } catch (reason) {
         if (!signal.aborted) {
-          const message = reason instanceof Error ? reason.message : 'Could not load this repository';
+          const message = errorMessage(reason, 'Could not load this repository');
           setCards((previous) => ({
             ...previous,
             [repo.id]: { ...(previous[repo.id] ?? EMPTY), error: message, loading: false },
