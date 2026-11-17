@@ -13,7 +13,10 @@
   },
   "scripts": {
     "dev": "node --watch scripts/dev.ts",
+    "deps": "pnpm install",
+    "clean": "node scripts/clean.ts",
     "build": "vite build && vite build --config vite.server.config.ts && node scripts/finish-build.ts",
+    "install:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File install/install-windows.ps1 -LocalFile dist/ravi.mjs",
     "smoke": "node dist/ravi.mjs --version",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint . --max-warnings 0",
