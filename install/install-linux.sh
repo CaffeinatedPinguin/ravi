@@ -8,14 +8,15 @@
 #   2. Looks for an existing ravi installation and reads its version.
 #   3. Asks GitHub which ravi release is the latest one.
 #   4. Downloads ravi.mjs from that release and puts it in the install folder.
-#   5. Writes a small launcher, "ravi", that runs it with Node.js.
+#   5. Writes a small launcher, "ravi", that runs it with Node.js. The launcher makes ravi keep
+#      its data (reviews, tokens, settings) in the same folder, so everything is in one place.
 #   6. Makes sure the launcher's folder is in your PATH, so `ravi` works in a terminal.
 #   7. Prints how to start, update and uninstall ravi.
 #
 # What this script does NOT do:
 #   - It does not use sudo and never touches anything outside your home folder.
 #   - It writes two files (ravi.mjs and the launcher) and, only if needed, two lines to
-#     your shell profile. Your reviews and tokens live in ~/.ravi and are not touched.
+#     your shell profile. Running it again to update never touches your data.
 #
 # Network access (nothing else is contacted, nothing about you is sent):
 #   - https://api.github.com/repos/CaffeinatedPinguin/ravi/releases/latest          (step 3)
@@ -28,7 +29,7 @@
 #   sh install-linux.sh ./ravi.mjs      # install a ravi.mjs you already have (offline)
 #
 # Default folders (change them by setting RAVI_PREFIX, for example RAVI_PREFIX=/opt/ravi):
-#   ~/.local/share/ravi/ravi.mjs        the program
+#   ~/.local/share/ravi/ravi.mjs        the program (your data lives in this folder too)
 #   ~/.local/bin/ravi                   the launcher
 #
 # This file is plain POSIX sh, so it runs under bash, dash and busybox alike.
@@ -200,13 +201,17 @@ if [ "$have_new_file" = yes ]; then
 fi
 
 # --- Step 5: the launcher ----------------------------------------------------------------------
-# The launcher is a three-line script: it runs ravi.mjs with Node.js and passes your arguments
-# on. The full path of ravi.mjs is written into it now, so there is nothing to guess later.
+# The launcher is a short script: it runs ravi.mjs with Node.js and passes your arguments on.
+# The full path of ravi.mjs is written into it now, so there is nothing to guess later.
+# It also sets RAVI_HOME to the program folder, which is how ravi learns where to keep its data
+# (reviews, tokens, settings); without it ravi would use ~/.ravi. If RAVI_HOME is already set in
+# your environment, that value wins.
 
 step 5 "Writing the launcher"
 cat > "$LAUNCHER" <<EOF
 #!/bin/sh
-# Written by the ravi installer. Runs ravi with Node.js.
+# Written by the ravi installer. Runs ravi with Node.js and keeps its data next to the program.
+export RAVI_HOME="\${RAVI_HOME:-$APP_DIR}"
 exec node "$APP_FILE" "\$@"
 EOF
 chmod +x "$LAUNCHER"
@@ -251,6 +256,16 @@ esac
 step 7 "Checking the installation"
 say "ravi $("$LAUNCHER" --version) is installed"
 
+# Earlier releases kept their data in ~/.ravi. We never move your data for you (it holds your
+# tokens); if there is something to bring along, we show the command to do it.
+if [ -d "$HOME/.ravi" ] && [ ! -d "$APP_DIR/data" ]; then
+  echo
+  say "Found data from an earlier setup in $HOME/.ravi"
+  say "ravi now keeps its data in $APP_DIR. To bring your reviews and tokens"
+  say "along, run this once (the old folder is left as it is):"
+  say "  cp -R \"$HOME/.ravi/.\" \"$APP_DIR/\""
+fi
+
 echo
 echo "----------------------------------------------------------------------"
 echo "How to start ravi"
@@ -269,7 +284,7 @@ echo "How to update"
 echo "  Run this installer again. It tells you whether a newer version exists."
 echo
 echo "How to uninstall"
-echo "  1. Delete the program and the launcher:  rm -r \"$APP_DIR\" \"$LAUNCHER\""
+echo "  1. Delete the program, its data and the launcher:  rm -r \"$APP_DIR\" \"$LAUNCHER\""
+echo "     The folder also holds your reviews and tokens, so copy them out first if you want them."
 echo "  2. Remove the two lines marked \"Added by the ravi installer\" from your shell profile."
-echo "  Your reviews and tokens stay in ~/.ravi until you delete that folder too."
 echo "----------------------------------------------------------------------"

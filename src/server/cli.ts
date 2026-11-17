@@ -20,7 +20,9 @@ import { readSettings } from './store/settings.ts';
 /** Fixed by default so bookmarks and the session cookie keep working between runs. */
 const DEFAULT_PORT = 4783;
 
-const HELP = `ravi ${VERSION} - local code review
+/** The help names the real data folder: the installers' launchers move it next to the program. */
+function helpText(dataFolder: string): string {
+  return `ravi ${VERSION} - local code review
 
 Usage: ravi [path] [options]
 
@@ -31,7 +33,12 @@ Options:
   --no-open      Do not open the browser
   --version      Print the version
   --help         Print this help
+
+Data folder (reviews, settings and the .env file with tokens):
+  ${dataFolder}
+  Set the RAVI_HOME environment variable to use another folder.
 `;
+}
 
 export type RunOptions = {
   /** Embedded UI; `null` when a dev server (Vite) serves it instead. */
@@ -56,7 +63,7 @@ export async function run(argv: string[], options: RunOptions): Promise<void> {
     return;
   }
   if (values.help) {
-    console.log(HELP);
+    console.log(helpText(resolvePaths().home));
     return;
   }
 

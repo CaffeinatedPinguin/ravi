@@ -44,7 +44,7 @@ describe('forgeFor', () => {
     expect(error).toBeInstanceOf(HttpError);
     const httpError = error as HttpError;
     expect(httpError.status).toBe(401);
-    expect(httpError.message).toBe('No token for github.com: add GITHUB_TOKEN to ~/.ravi/.env');
+    expect(httpError.message).toBe(`No token for github.com: add GITHUB_TOKEN to ${paths.envFile}`);
   });
 
   it('builds the strategy for a registered host when the token exists', async () => {

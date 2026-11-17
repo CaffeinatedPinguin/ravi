@@ -8,14 +8,15 @@
       2. Looks for an existing ravi installation and reads its version.
       3. Asks GitHub which ravi release is the latest one.
       4. Downloads ravi.mjs from that release and puts it in the install folder.
-      5. Writes a small launcher, ravi.cmd, next to it.
+      5. Writes a small launcher, ravi.cmd, next to it. The launcher makes ravi keep its data
+         (reviews, tokens, settings) in the same folder, so everything is in one place.
       6. Adds the install folder to your user PATH so that `ravi` works in a terminal.
       7. Prints how to start, update and uninstall ravi.
 
     What this script does NOT do:
       - It does not need administrator rights and never touches anything machine-wide.
       - It writes only two files (ravi.mjs and ravi.cmd) into the install folder, plus one
-        entry in your user PATH. Your reviews and tokens live in ~\.ravi and are not touched.
+        entry in your user PATH. Running it again to update never touches your data.
 
     Network access (nothing else is contacted, nothing about you is sent):
       - https://api.github.com/repos/CaffeinatedPinguin/ravi/releases/latest   (step 3)
@@ -177,11 +178,16 @@ try {
     }
 
     # --- Step 5: the launcher ---
-    # ravi.cmd is two lines: it runs ravi.mjs with Node.js. "%~dp0" means "the folder this file
-    # is in", so the launcher keeps working if you move the whole folder.
+    # ravi.cmd runs ravi.mjs with Node.js. "%~dp0" means "the folder this file is in".
+    # It also sets RAVI_HOME to that folder, which is how ravi learns where to keep its data
+    # (reviews, tokens, settings); without it ravi would use ~\.ravi. If RAVI_HOME is already
+    # set in your environment, that value wins. "setlocal" keeps the variable out of your
+    # terminal session.
     Write-Step 5 'Writing the launcher'
     Set-Content -LiteralPath $Launcher -Encoding Ascii -Value @(
         '@echo off',
+        'setlocal',
+        'if not defined RAVI_HOME set "RAVI_HOME=%~dp0"',
         'node "%~dp0ravi.mjs" %*'
     )
     Write-Host "  Wrote $Launcher"
@@ -210,6 +216,18 @@ try {
     $check = & $Launcher --version
     Write-Host "  ravi $check is installed" -ForegroundColor Green
 
+    # Earlier releases kept their data in ~\.ravi. We never move your data for you (it holds your
+    # tokens); if there is something to bring along, we show the command to do it.
+    $oldHome = Join-Path $HOME '.ravi'
+    $hasNewData = Test-Path -LiteralPath (Join-Path $InstallDir 'data')
+    if ((Test-Path -LiteralPath $oldHome) -and -not $hasNewData) {
+        Write-Host ''
+        Write-Host "  Found data from an earlier setup in $oldHome" -ForegroundColor Yellow
+        Write-Host '  ravi now keeps its data in the install folder. To bring your reviews and tokens'
+        Write-Host '  along, run this once (the old folder is left as it is):'
+        Write-Host "    Copy-Item -Recurse -Force -Path '$oldHome\*' -Destination '$InstallDir'"
+    }
+
     Write-Host @"
 
 ----------------------------------------------------------------------
@@ -226,8 +244,8 @@ How to update
 
 How to uninstall
   1. Delete the folder $InstallDir
+     It also holds your reviews and tokens, so copy them out first if you want to keep them.
   2. Remove that folder from your PATH (Win+R, then run: rundll32 sysdm.cpl,EditEnvironmentVariables)
-  Your reviews and tokens stay in $HOME\.ravi until you delete that folder too.
 ----------------------------------------------------------------------
 "@
 } catch {
