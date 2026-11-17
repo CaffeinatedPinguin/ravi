@@ -3,10 +3,9 @@ import { createHash } from 'node:crypto';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { RepoListSchema } from '../../shared/api.ts';
-import type { Repo, RepoTokenScope, RepoTransport } from '../../shared/api.ts';
+import type { Repo, RepoTokenScope } from '../../shared/api.ts';
 import type { RepoRef } from '../../shared/forge.ts';
 import { detectRepoRef } from '../forges/remote.ts';
-import { gitText } from '../git/exec.ts';
 import { findRepoRoot } from '../git/repo.ts';
 import { HttpError } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
@@ -19,9 +18,10 @@ const file = (paths: Paths) => join(paths.data, 'repos.json');
 
 export async function listRepos(paths: Paths): Promise<Repo[]> {
   const repos = await readJsonFile(file(paths), RepoListSchema, []);
-  // Files written before transports existed get the same defaults a fresh repository would have.
+  // Files written before token scopes existed get the same default a fresh repository would have;
+  // the plain object parser already drops retired fields from older files.
   return repos
-    .map((repo) => ({ ...repo, transport: repo.transport ?? 'https', tokenScope: repo.tokenScope ?? 'repo' }))
+    .map((repo) => ({ ...repo, tokenScope: repo.tokenScope ?? 'repo' }))
     .sort((left, right) => right.lastUsedAt.localeCompare(left.lastUsedAt));
 }
 
@@ -48,7 +48,6 @@ export async function addRepo(paths: Paths, folder: string): Promise<Repo> {
     lastUsedAt: new Date().toISOString(),
     kind: 'local',
     remote: await detectRepoRef(root),
-    transport: await originTransport(root),
     tokenScope: 'repo',
   };
   const others = (await listRepos(paths)).filter((candidate) => candidate.id !== repo.id);
@@ -60,7 +59,7 @@ export async function addRepo(paths: Paths, folder: string): Promise<Repo> {
 export async function addRemoteRepo(
   paths: Paths,
   ref: RepoRef,
-  connection: { transport: RepoTransport; tokenScope: RepoTokenScope } = { transport: 'https', tokenScope: 'repo' },
+  connection: { tokenScope: RepoTokenScope } = { tokenScope: 'repo' },
 ): Promise<Repo> {
   const path = cloneFolder(paths, ref);
   const repo: Repo = {
@@ -70,7 +69,6 @@ export async function addRemoteRepo(
     lastUsedAt: new Date().toISOString(),
     kind: 'remote',
     remote: ref,
-    transport: connection.transport,
     tokenScope: connection.tokenScope,
   };
   const others = (await listRepos(paths)).filter((candidate) => candidate.id !== repo.id);
@@ -87,14 +85,14 @@ export function remoteRepoId(paths: Paths, ref: RepoRef): string {
 export async function setRepoConnection(
   paths: Paths,
   id: string,
-  connection: { transport: RepoTransport; tokenScope: RepoTokenScope },
+  connection: { tokenScope: RepoTokenScope },
 ): Promise<Repo> {
   const repos = await listRepos(paths);
   const current = repos.find((candidate) => candidate.id === id);
   if (current === undefined) {
     throw new HttpError(404, 'Repository is not connected');
   }
-  const updated: Repo = { ...current, transport: connection.transport, tokenScope: connection.tokenScope };
+  const updated: Repo = { ...current, tokenScope: connection.tokenScope };
   await writeJsonFile(file(paths), [updated, ...repos.filter((candidate) => candidate.id !== id)]);
   return updated;
 }
@@ -154,10 +152,4 @@ export async function scanForRepos(folder: string): Promise<string[]> {
 /** Stable id derived from the path, so the same folder always maps to the same stored reviews. */
 function repoId(root: string): string {
   return createHash('sha1').update(root.toLowerCase()).digest('hex').slice(0, 12);
-}
-
-/** A local folder talks to its origin the same way the user's `git` does; defaults to HTTPS. */
-async function originTransport(root: string): Promise<RepoTransport> {
-  const url = await gitText(root, ['remote', 'get-url', 'origin']).catch(() => '');
-  return /^(?:ssh:|git@)/.test(url.trim()) ? 'ssh' : 'https';
 }

@@ -102,9 +102,6 @@ export type {
 
 // ── Repositories ────────────────────────────────────────────────────────────
 
-/** How git talks to the forge: the user's own keys, or a token over HTTPS. */
-export const RepoTransportSchema = z.enum(['ssh', 'https']);
-export type RepoTransport = z.infer<typeof RepoTransportSchema>;
 /** Where the token of a repository lives in `~/.ravi/.env`. */
 export const RepoTokenScopeSchema = z.enum(['repo', 'host']);
 export type RepoTokenScope = z.infer<typeof RepoTokenScopeSchema>;
@@ -119,8 +116,6 @@ export const RepoSchema = z.object({
   kind: z.enum(['local', 'remote']).default('local'),
   /** Forge repository for a remote clone; local folders fill it from `origin` when connected. */
   remote: RepoRefSchema.nullable().default(null),
-  /** Old remotes were cloned over HTTPS, so that is the safe default for a legacy entry. */
-  transport: RepoTransportSchema.optional(),
   /** Default to a repository token; the host token is the explicit "use for all" choice. */
   tokenScope: RepoTokenScopeSchema.optional(),
 });
@@ -143,7 +138,6 @@ export const AddRepoRequestSchema = z.object({ path: z.string().min(1) });
 /** A repository URL the user pasted; only a registered forge host is accepted. */
 export const AddRemoteRepoRequestSchema = z.object({
   url: z.string().min(1).max(2048),
-  transport: RepoTransportSchema.default('https'),
   tokenScope: RepoTokenScopeSchema.default('repo'),
   /** Absent means "leave the stored token alone"; null is not sent when adding. */
   token: z.string().min(1).max(512).optional(),
@@ -163,7 +157,6 @@ export const TokenInputSchema = z
   .refine((value) => !/[\r\n]/.test(value), { message: 'A token must be a single line' });
 
 export const RepoConnectionRequestSchema = z.object({
-  transport: RepoTransportSchema,
   tokenScope: RepoTokenScopeSchema,
   /** Absent keeps the stored token; null removes the token of the selected scope. */
   token: TokenInputSchema.nullable().optional(),

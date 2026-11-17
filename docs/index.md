@@ -5,4 +5,5 @@
 - [0001 — Stack and distribution](decisions/0001-stack-and-distribution.md) — why ravi ships as one bundled JavaScript file and which dependencies it allows.
 - [0004 — Tokens written from Settings](decisions/0004-tokens-written-from-settings.md) — where forge tokens are stored and how Settings writes them.
 - [0005 — One installer per operating system](decisions/0005-per-os-installers.md) — what the release contains, where the installers put ravi and what they download.
+- [0006 — No per-repository SSH transport](decisions/0006-no-ssh-transport.md) — why the wizard no longer asks for a transport and how clones and local folders reach the forge.
 - [Review Markdown format](specs/review-format.md) — the comment model and the text format used to copy, save and import a review.

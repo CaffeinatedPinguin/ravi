@@ -36,7 +36,7 @@ export function registerRepoRoutes(router: Router, { paths }: AppContext): void 
   // Feeds the base branch and range pickers; the id is looked up, never used as a path.
   router.get('/api/repos/:id/refs', async ({ params }) => readRefs((await getRepo(paths, params.id ?? '')).path));
 
-  // Connection step of the settings wizard: transport and the token, which never comes back.
+  // Connection step of the settings wizard: the token, which never comes back.
   router.put('/api/repos/:id/connection', async ({ params, body }): Promise<RepoView> => {
     const repo = await getRepo(paths, params.id ?? '');
     const input = await body(RepoConnectionRequestSchema);
@@ -44,7 +44,7 @@ export function registerRepoRoutes(router: Router, { paths }: AppContext): void 
       const name = tokenVariable(repo.remote?.host ?? null, repo.id, input.tokenScope);
       await setEnvVar(paths.envFile, name, input.token);
     }
-    const updated = await setRepoConnection(paths, repo.id, { transport: input.transport, tokenScope: input.tokenScope });
+    const updated = await setRepoConnection(paths, repo.id, { tokenScope: input.tokenScope });
     return viewRepo(paths, updated);
   });
 
