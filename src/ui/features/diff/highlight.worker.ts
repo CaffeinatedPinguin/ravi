@@ -84,7 +84,8 @@ function getHighlighter(): Promise<HighlighterCore> {
 }
 
 async function ensureLanguage(core: HighlighterCore, language: string): Promise<boolean> {
-  const load = LANGUAGES[language];
+  // Own keys only, so a language name such as "constructor" is never looked up on Object.prototype.
+  const load = Object.hasOwn(LANGUAGES, language) ? LANGUAGES[language] : undefined;
   if (!load) {
     return false;
   }

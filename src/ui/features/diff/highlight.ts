@@ -27,7 +27,9 @@ const LANGUAGE_BY_EXTENSION: Record<string, string> = {
 export function languageForPath(path: string): string | null {
   const name = path.slice(path.lastIndexOf('/') + 1).toLowerCase();
   const extension = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : name;
-  return LANGUAGE_BY_EXTENSION[extension] ?? null;
+  // Own keys only: the name comes from the reviewed repository, and a file called x.constructor
+  // must not resolve to a member inherited from Object.prototype.
+  return Object.hasOwn(LANGUAGE_BY_EXTENSION, extension) ? (LANGUAGE_BY_EXTENSION[extension] ?? null) : null;
 }
 
 let worker: Worker | null = null;
