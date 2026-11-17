@@ -1,6 +1,6 @@
 /**
  * First run: an empty data folder teaches the new user the two things ravi needs (a repository and
- * a connection choice) and ends on a dashboard that lists the connected folder.
+ * an optional forge token) and ends on a dashboard that lists the connected folder.
  */
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
@@ -53,17 +53,16 @@ test('empty data folder: setup screen, add repository, dashboard', async ({ page
   await expect(wizard.getByText(pickedRepo)).toBeVisible();
   await wizard.getByRole('button', { name: 'Continue' }).click();
 
-  // The connection step is a required decision; the wizard blocks it by disabling Continue.
-  await expect(wizard.getByText('Connection (required)')).toBeVisible();
+  // The token step is optional: pull requests need it, git keeps using the user's own credentials.
+  await expect(wizard.getByText(/Pull requests and comments use the GitHub\/GitLab API/)).toBeVisible();
+  await expect(wizard.getByLabel('Token')).toBeVisible();
+  await expect(wizard.getByRole('radio', { name: /SSH — use my SSH keys/ })).toHaveCount(0);
   const continueButton = wizard.getByRole('button', { name: 'Continue' });
-  await expect(continueButton).toBeDisabled();
-  await expect(wizard.getByText('Connection (required)')).toBeVisible();
+  await expect(continueButton).toBeEnabled();
   const repoList = (await (await page.request.get(`${app.baseUrl}/api/repos`)).json()) as unknown[];
   expect(repoList).toEqual([]);
   await shotLive(page, 'flow-first-run-connection');
 
-  await wizard.getByRole('radio', { name: /SSH — use my SSH keys/ }).check();
-  await expect(continueButton).toBeEnabled();
   await continueButton.click();
 
   await expect(wizard.getByRole('button', { name: 'Test connection', exact: true })).toBeVisible();

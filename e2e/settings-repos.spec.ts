@@ -77,7 +77,7 @@ test('finds the repositories inside a folder and adds only the chosen one', asyn
   await expect(page.getByText('found-two', { exact: true })).toHaveCount(0);
 });
 
-test('adds a local folder through Choose folder and requires a transport', async ({ page }) => {
+test('adds a local folder through Choose folder and shows an optional token step', async ({ page }) => {
   await openWizard(page);
   await shot(page, app.baseUrl, 'settings-repos-add');
 
@@ -87,16 +87,17 @@ test('adds a local folder through Choose folder and requires a transport', async
   await expect(wizard.getByText(pickedRepo)).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  // Uploading the connection step's screenshot reloads the page, so this is verified first.
-  await expect(page.getByRole('radio', { name: /use my SSH keys/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled();
+  // Uploading the token step's screenshot reloads the page, so this is verified first.
+  await expect(page.getByText(/Pull requests and comments use the GitHub\/GitLab API/)).toBeVisible();
+  await expect(page.getByLabel('Token')).toBeVisible();
+  await expect(page.getByRole('radio', { name: /use my SSH keys/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
   await shot(page, app.baseUrl, 'settings-repos-connection');
 
   await openWizard(page);
   await page.getByRole('button', { name: 'Choose folder' }).click();
   await expect(wizard.getByText(pickedRepo)).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('radio', { name: /use my SSH keys/ }).check();
   await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled();
   await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -115,7 +116,6 @@ test('adds a local folder through Paste path', async ({ page }) => {
   await page.getByLabel('Paste path').check();
   await page.getByLabel('Folder path').fill(pastedRepo);
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByRole('radio', { name: /HTTPS — use a token/ }).check();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   const wizard = page.getByRole('region', { name: 'Add repository' });

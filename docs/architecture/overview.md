@@ -47,7 +47,7 @@ written by the installers set it to the install folder, so the data sits next to
 | `data/session-token` | Secret that authorises the browser tab |
 | `data/instance.json` (runtime) | Port and pid of the running server |
 | `data/settings.json` | View, theme, tree width, clone retention and notification filters |
-| `data/repos.json` | Connected local folders and remote clones, with transport and token scope |
+| `data/repos.json` | Connected local folders and remote clones, with the forge remote and token scope |
 | `data/review-later.json` | Pull requests marked to review later |
 | `data/reviews/` | Local comments and unsent drafts, per repository and review target |
 | `data/notifications.json` | Notification inbox, seen markers and the filter preview cache |

@@ -1,7 +1,8 @@
 /**
  * Settings → Repositories: the list of connected folders and remotes plus the three-step
- * "Add repository" flow. Connection is a required step because git has to know whether it may use
- * the user's SSH keys or a token; the server stores the token and only ever answers a hint.
+ * "Add repository" flow. The token is optional because pull requests and comments need the forge
+ * API, while git itself keeps using the user's own credentials; the server stores the token and
+ * only ever answers a hint.
  */
 import { useRef, useState } from 'react';
 import { z } from 'zod';
@@ -11,7 +12,7 @@ import {
   RepoViewSchema,
   TestConnectionResponseSchema,
 } from '../../../shared/api.ts';
-import type { RepoTransport, RepoView, TestConnectionResponse } from '../../../shared/api.ts';
+import type { RepoView, TestConnectionResponse } from '../../../shared/api.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
 import { errorMessage } from '../../app/errors.ts';
 import { useAsync } from '../../app/useAsync.ts';
@@ -90,7 +91,7 @@ export function RepositoriesSection() {
                     : repo.path}
                 </code>
                 <span className={styles.meta}>
-                  {repo.remote === null ? 'No forge remote' : repo.remote?.host} · {transportLabel(repo.transport)} ·{' '}
+                  {repo.remote === null ? 'No forge remote' : repo.remote?.host} ·{' '}
                   {repo.hasToken ? `token ${repo.tokenHint ?? 'saved'}` : 'no token'}
                 </span>
                 {answer !== undefined && <ConnectionResult result={answer} />}
@@ -138,10 +139,6 @@ export function RepositoriesSection() {
   );
 }
 
-function transportLabel(transport: RepoTransport | undefined): string {
-  return transport === 'ssh' ? 'SSH' : 'HTTPS';
-}
-
 function ConnectionResult({ result }: { result: TestConnectionResponse }) {
   return (
     <div className={styles.result} role="status">
@@ -171,7 +168,6 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
   const [url, setUrl] = useState(
     repo !== null && repo.remote !== null ? `https://${repo.remote.host}/${repo.remote.project}` : '',
   );
-  const [transport, setTransport] = useState<RepoTransport | null>(repo?.transport ?? null);
   const [token, setToken] = useState('');
   const [hostScope, setHostScope] = useState(repo?.tokenScope === 'host');
   const [picking, setPicking] = useState(false);
@@ -215,7 +211,6 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
   };
 
   const connectionBody = () => ({
-    transport: transport ?? 'https',
     tokenScope: hostScope ? ('host' as const) : ('repo' as const),
     ...(token.trim() === '' ? {} : { token: token.trim() }),
   });
@@ -232,7 +227,6 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
         '/api/repos/remote',
         {
           url: url.trim(),
-          transport: transport ?? 'https',
           tokenScope: hostScope ? 'host' : 'repo',
           ...(token.trim() === '' ? {} : { token: token.trim() }),
         },
@@ -387,53 +381,31 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
 
       {step === 2 && (
         <div className={styles.wizardBody}>
-          <p className={styles.stepTitle}>Connection (required)</p>
-          <fieldset className={styles.radioRow}>
-            <legend className={styles.hint}>Git transport</legend>
-            <label className={styles.radio}>
-              <input
-                type="radio"
-                name="git-transport"
-                checked={transport === 'ssh'}
-                onChange={() => setTransport('ssh')}
-              />
-              SSH — use my SSH keys
+          <p className={styles.stepTitle}>Token</p>
+          <p className={styles.hint}>
+            Pull requests and comments use the GitHub/GitLab API and need a token; git itself uses your own
+            credentials (SSH keys or HTTPS).
+          </p>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="repository-token">
+              Token
             </label>
-            <label className={styles.radio}>
-              <input
-                type="radio"
-                name="git-transport"
-                checked={transport === 'https'}
-                onChange={() => setTransport('https')}
-              />
-              HTTPS — use a token
-            </label>
-          </fieldset>
-
-          {transport === 'https' ? (
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="repository-token">
-                Token
+            <input
+              id="repository-token"
+              className={styles.textInput}
+              type="password"
+              aria-label="Token"
+              autoComplete="off"
+              value={token}
+              onChange={(event) => setToken(event.target.value)}
+            />
+            {host !== null && (
+              <label className={styles.radio}>
+                <input type="checkbox" checked={hostScope} onChange={(event) => setHostScope(event.target.checked)} />
+                Use the {host} token for all repositories
               </label>
-              <input
-                id="repository-token"
-                className={styles.textInput}
-                type="password"
-                aria-label="Token"
-                autoComplete="off"
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-              />
-              {host !== null && (
-                <label className={styles.radio}>
-                  <input type="checkbox" checked={hostScope} onChange={(event) => setHostScope(event.target.checked)} />
-                  Use the {host} token for all repositories
-                </label>
-              )}
-            </div>
-          ) : (
-            <p className={styles.hint}>Git uses your own SSH keys or agent; ravi never reads them.</p>
-          )}
+            )}
+          </div>
 
           <p className={styles.hint}>
             GitHub: Pull requests (read/write) + Contents (read). GitLab: <code>api</code> scope.
@@ -445,8 +417,7 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
         <div className={styles.wizardBody}>
           <p className={styles.stepTitle}>Test connection</p>
           <p className={styles.hint}>
-            {source === 'remote' ? url : path} · {transport === null ? 'no transport' : transportLabel(transport)} ·{' '}
-            {hostScope ? 'host token' : 'repository token'}
+            {source === 'remote' ? url : path} · {hostScope ? 'host token' : 'repository token'}
           </p>
           <div className={styles.wizardActions}>
             <Button onClick={() => void testConnection()} disabled={busy} aria-busy={busy}>
@@ -476,7 +447,7 @@ function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
         {step < 3 && (
           <Button
             variant="primary"
-            disabled={step === 1 ? !sourceReady : transport === null}
+            disabled={step === 1 && !sourceReady}
             onClick={() => setStep((current) => (current === 1 ? 2 : 3))}
           >
             Continue

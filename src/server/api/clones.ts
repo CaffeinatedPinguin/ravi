@@ -37,10 +37,7 @@ export function registerCloneRoutes(router: Router, { paths }: AppContext): void
       if (input.token !== undefined) {
         await setEnvVar(paths.envFile, tokenVariable(ref.host, existing.id, input.tokenScope), input.token);
       }
-      const updated = await setRepoConnection(paths, existing.id, {
-        transport: input.transport,
-        tokenScope: input.tokenScope,
-      });
+      const updated = await setRepoConnection(paths, existing.id, { tokenScope: input.tokenScope });
       return viewRepo(paths, updated);
     }
 
@@ -49,8 +46,8 @@ export function registerCloneRoutes(router: Router, { paths }: AppContext): void
     if (input.token !== undefined) {
       await setEnvVar(paths.envFile, tokenVariable(ref.host, id, input.tokenScope), input.token);
     }
-    await cloneRemote(paths, ref, { transport: input.transport, repoId: id, tokenScope: input.tokenScope });
-    const repo = await addRemoteRepo(paths, ref, { transport: input.transport, tokenScope: input.tokenScope });
+    await cloneRemote(paths, ref, { repoId: id, tokenScope: input.tokenScope });
+    const repo = await addRemoteRepo(paths, ref, { tokenScope: input.tokenScope });
     return viewRepo(paths, repo);
   });
 
@@ -59,8 +56,8 @@ export function registerCloneRoutes(router: Router, { paths }: AppContext): void
     const env = await envFor(paths, repo);
     if (repo.kind === 'remote' && repo.remote !== null) {
       await fetchRemote(repo.path, env);
-    } else if (repo.transport === 'https' && repo.remote !== null) {
-      // A local folder with an HTTPS transport may need a token, exactly like a clone.
+    } else if (repo.remote !== null) {
+      // A local folder may need the token for fetching PR refs over HTTPS, exactly like a clone.
       try {
         await gitText(repo.path, ['fetch', '--prune', 'origin'], { env });
       } catch (error) {
@@ -102,10 +99,9 @@ export function registerCloneRoutes(router: Router, { paths }: AppContext): void
   });
 }
 
-/** SSH never sees a token; HTTPS uses the repository token first, then the host token. */
+/** The token is for the forge API and HTTPS git; an SSH origin of a local folder ignores it. */
 function envFor(paths: AppContext['paths'], repo: Repo): Promise<NodeJS.ProcessEnv> {
   return cloneEnv(paths, repo.remote, {
-    transport: repo.transport,
     repoId: repo.id,
     tokenScope: repo.tokenScope,
   });

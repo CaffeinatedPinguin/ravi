@@ -11,7 +11,7 @@
  */
 import { mkdir, readdir, realpath, rename, rm, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import type { CloneInfo, ConnectionCheck, Repo, RepoTokenScope, RepoTransport } from '../../shared/api.ts';
+import type { CloneInfo, ConnectionCheck, Repo, RepoTokenScope } from '../../shared/api.ts';
 import type { ForgeKind, RepoRef } from '../../shared/forge.ts';
 import { readForgeTokens } from '../forges/env.ts';
 import type { ForgeHost } from '../forges/forge.ts';
@@ -39,31 +39,26 @@ export type CloneOptions = {
   cloneUrl?: string;
   /** Test seam: observes the clone child process so the token can be checked in the env, not in argv. */
   onSpawn?: (info: SpawnInfo) => void;
-  /** How the clone reaches the forge; defaults to the historical HTTPS behaviour. */
-  transport?: RepoTransport;
   /** Repository whose own token should be used before the host token. */
   repoId?: string;
   tokenScope?: RepoTokenScope;
 };
 
 export type CloneEnvOptions = {
-  transport?: RepoTransport;
   repoId?: string;
   tokenScope?: RepoTokenScope;
 };
 
 /**
  * Environment that authenticates git for this repository; an empty object means an anonymous call.
- * SSH deliberately gets nothing: git uses the user's own keys/agent and ravi never handles them.
+ * The token is for the forge API and for HTTPS git: a local folder whose `origin` is SSH simply
+ * ignores the injected header and uses the user's own keys, exactly as plain `git` does.
  */
 export async function cloneEnv(
   paths: Paths,
   ref: RepoRef | null,
   options: CloneEnvOptions = {},
 ): Promise<NodeJS.ProcessEnv> {
-  if (options.transport === 'ssh') {
-    return {};
-  }
   const host = ref === null ? undefined : hostFor(ref);
   if (host === undefined) {
     return {};
@@ -94,15 +89,6 @@ export function httpsCloneUrl(ref: RepoRef): string {
   return `${host.webUrl}/${ref.project}.git`;
 }
 
-/** SSH form git understands natively; the user's SSH agent supplies the key. */
-export function sshCloneUrl(ref: RepoRef): string {
-  return `git@${ref.host}:${ref.project}.git`;
-}
-
-export function remoteUrlFor(ref: RepoRef, transport: RepoTransport): string {
-  return transport === 'ssh' ? sshCloneUrl(ref) : httpsCloneUrl(ref);
-}
-
 /**
  * Clones `ref` into its clone folder through a temporary directory, so a failed clone never leaves a
  * half repository behind. The URL comes from the registry, never from text the user pasted.
@@ -116,13 +102,11 @@ export async function cloneRemote(paths: Paths, ref: RepoRef, options: CloneOpti
     return;
   }
 
-  const transport = options.transport ?? 'https';
   const temporary = `${destination}.${process.pid}.${Date.now()}.tmp`;
-  const url = options.cloneUrl ?? remoteUrlFor(ref, transport);
+  const url = options.cloneUrl ?? httpsCloneUrl(ref);
   try {
     await git(parent, ['clone', '--bare', '--filter=blob:none', '--no-tags', url, temporary], {
       env: await cloneEnv(paths, ref, {
-        transport,
         ...(options.repoId === undefined ? {} : { repoId: options.repoId }),
         ...(options.tokenScope === undefined ? {} : { tokenScope: options.tokenScope }),
       }),
@@ -145,19 +129,16 @@ export async function fetchRemote(root: string, env: NodeJS.ProcessEnv = {}): Pr
 }
 
 /**
- * "Test connection" for git: a cheap `ls-remote` with the transport the user chose.
- * A local folder has no repository URL ravi owns, so it checks the folder's own `origin`;
- * a remote clone is checked against the URL matching the selected transport.
+ * "Test connection" for git: a cheap `ls-remote`. A local folder has no repository URL ravi owns,
+ * so it checks the folder's own `origin`; a remote clone is checked against its HTTPS URL.
  */
 export async function testGitConnection(
   paths: Paths,
   repo: Repo,
   options: { timeoutMs?: number; onSpawn?: (info: SpawnInfo) => void } = {},
 ): Promise<ConnectionCheck> {
-  const transport = repo.transport ?? 'https';
-  const target = repo.kind === 'remote' && repo.remote !== null ? remoteUrlFor(repo.remote, transport) : 'origin';
+  const target = repo.kind === 'remote' && repo.remote !== null ? httpsCloneUrl(repo.remote) : 'origin';
   const env = await cloneEnv(paths, repo.remote, {
-    transport,
     repoId: repo.id,
     tokenScope: repo.tokenScope,
   });
