@@ -186,8 +186,12 @@ function DashboardView({ repos, notice }: { repos: readonly Repo[]; notice: stri
         <span className={styles.spacer} />
         <Button
           icon="refresh"
-          aria-busy={loading}
-          onClick={() => setRefreshKey((value) => value + 1)}
+          title="Reload every repository and the Review later list"
+          aria-busy={loading || laterRefreshing}
+          onClick={() => {
+            setRefreshKey((value) => value + 1);
+            void refreshLater();
+          }}
         >
           Refresh all
         </Button>
@@ -207,8 +211,6 @@ function DashboardView({ repos, notice }: { repos: readonly Repo[]; notice: stri
             entries={later.data}
             error={later.error}
             repos={repos}
-            refreshing={laterRefreshing}
-            onRefresh={() => void refreshLater()}
           />
           <NotificationsCard />
         </div>
@@ -489,21 +491,15 @@ type ReviewLaterPanelProps = {
   entries: ReviewLaterEntry[] | undefined;
   error: string | null;
   repos: readonly Repo[];
-  refreshing: boolean;
-  onRefresh: () => void;
 };
 
-function ReviewLaterPanel({ entries, error, repos, refreshing, onRefresh }: ReviewLaterPanelProps) {
+function ReviewLaterPanel({ entries, error, repos }: ReviewLaterPanelProps) {
   const nameOf = (repoId: string): string => repos.find((repo) => repo.id === repoId)?.name ?? repoId;
   return (
     <section className={styles.panel} aria-labelledby="dashboard-review-later">
       <div className={styles.sectionHeader}>
         <h2 id="dashboard-review-later">Review later</h2>
         <span className={styles.count}>{entries?.length ?? 0}</span>
-        <span className={styles.spacer} />
-        <Button icon="refresh" disabled={refreshing} aria-busy={refreshing} onClick={onRefresh}>
-          Refresh
-        </Button>
       </div>
       {error !== null && (
         <p className={styles.error} role="alert">

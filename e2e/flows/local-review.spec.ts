@@ -113,7 +113,7 @@ test('split view, range comment lifecycle and Markdown round trip', async ({ pag
     .join(IMPORTED_BODY)
     .split(REPLY_BODY)
     .join(IMPORTED_REPLY_BODY);
-  await exportAction(page, 'Import…');
+  await page.getByRole('button', { name: 'Import', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Import review' });
   await expect(dialog).toBeVisible();
   await page.getByRole('textbox', { name: 'Review Markdown to import' }).fill(importedText);
@@ -137,8 +137,8 @@ async function switchLayout(page: Page, name: 'Split' | 'Unified'): Promise<void
   await saved;
 }
 
-/** The Markdown transfer buttons now live in the toolbar's Export menu. */
-async function exportAction(page: Page, name: 'Copy for AI' | 'Import…' | 'Save as file'): Promise<void> {
+/** Copy and Save live in the toolbar's Export menu; Import is a button of its own. */
+async function exportAction(page: Page, name: 'Copy for AI' | 'Save as file'): Promise<void> {
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await page.getByRole('menuitem', { name, exact: true }).click();
 }
