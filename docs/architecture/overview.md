@@ -29,6 +29,7 @@
 | `src/server/api/` | One route module per area, registered by `app.ts` |
 | `src/ui/app/` | App shell, API client, routing |
 | `src/ui/features/` | One folder per feature (repos, diff, comments, pulls, dashboard, notifications, review, settings) |
+| `install/` | One installer per operating system, shipped with each release |
 | `scripts/` | Dev server, build finishing step, benchmark, test fixtures |
 | `e2e/` | Playwright tests in Microsoft Edge against the built `dist/ravi.mjs` |
 
@@ -71,7 +72,9 @@ The implementation and rationale live in `src/server/http/security.ts`.
 
 `pnpm build` runs three steps: Vite builds the UI to `dist/ui`, a second Vite (SSR) build bundles the
 server and embeds `dist/ui` through the `virtual:ui-assets` module, and `scripts/finish-build.ts`
-writes the launchers and removes `dist/ui`.
+copies the three installers from `install/` next to it and removes `dist/ui`. `dist/` is then
+exactly the release: `ravi.mjs`, `install-windows.ps1`, `install-macos.sh` and `install-linux.sh`
+(see [0005](../decisions/0005-per-os-installers.md)).
 
 `pnpm e2e` starts the built `dist/ravi.mjs` and drives it with Playwright in Microsoft Edge against
 a temporary repository and a loopback fake forge. `pnpm bench` times the server side of a huge diff

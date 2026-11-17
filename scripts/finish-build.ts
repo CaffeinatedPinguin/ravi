@@ -1,14 +1,17 @@
 /**
- * Last build step: writes the two launchers next to `dist/ravi.mjs` and removes the intermediate
- * UI build, leaving the three files that make up a release.
+ * Last build step: copies the three installers next to `dist/ravi.mjs` and removes the
+ * intermediate UI build, leaving the four files that make up a release. The installers write
+ * the `ravi` launcher themselves, so the build does not ship one.
  */
-import { chmodSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, rmSync, statSync } from 'node:fs';
+
+const INSTALLERS = ['install-windows.ps1', 'install-macos.sh', 'install-linux.sh'];
 
 rmSync('dist/ui', { recursive: true, force: true });
 
-writeFileSync('dist/ravi.cmd', '@echo off\r\nnode "%~dp0ravi.mjs" %*\r\n');
-writeFileSync('dist/ravi', '#!/bin/sh\nexec node "$(dirname "$0")/ravi.mjs" "$@"\n');
-chmodSync('dist/ravi', 0o755);
+for (const name of INSTALLERS) {
+  copyFileSync(`install/${name}`, `dist/${name}`);
+}
 
 const sizeMb = statSync('dist/ravi.mjs').size / (1024 * 1024);
-console.log(`dist/ravi.mjs ${sizeMb.toFixed(2)} MB (+ ravi, ravi.cmd)`);
+console.log(`dist/ravi.mjs ${sizeMb.toFixed(2)} MB (+ ${INSTALLERS.join(', ')})`);

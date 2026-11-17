@@ -43,12 +43,13 @@ jobs:
       node-version-file: .nvmrc
       # ravi has no Docker image, so the dist artifact is not uploaded.
       artifact-name: ""
-      # Only the Ubuntu variant contributes the three release files.
+      # Only the Ubuntu variant contributes the release files: the program and one installer per OS.
       assets-name: ${{ matrix.os == 'ubuntu-latest' && 'ravi' || '' }}
       assets-path: |
         dist/ravi.mjs
-        dist/ravi
-        dist/ravi.cmd
+        dist/install-windows.ps1
+        dist/install-macos.sh
+        dist/install-linux.sh
       check-release-tag: true
 
   release:
@@ -61,7 +62,7 @@ jobs:
     with:
       title-prefix: "ravi "
       assets-artifact: ravi
-      assets-glob: ravi.mjs ravi ravi.cmd
+      assets-glob: ravi.mjs install-windows.ps1 install-macos.sh install-linux.sh
 
   conventions:
     name: conventions

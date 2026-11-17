@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-11-14
-- Superseded-by: none
+- Superseded-by: none (the launchers and the installing steps are refined by [0005](0005-per-os-installers.md))
 
 ## Context
 
@@ -13,12 +13,12 @@ Maintainability matters more than features, and the project is open source.
 ## Decision
 
 Write the server and the UI in TypeScript, require Node ≥ 22, and ship one bundled file
-(`ravi.mjs`, UI embedded) plus two launcher scripts. Keep runtime dependencies to a short list of
+(`ravi.mjs`, UI embedded), installed by one small script per operating system (see 0005). Keep runtime dependencies to a short list of
 widely used libraries: `react`, `react-dom`, `@tanstack/react-virtual`, `shiki`, `markdown-it`, `zod`.
 
 ## Consequences
 
-- One artifact works on every OS; installing is copying three files.
+- One artifact works on every OS; installing is running one installer script (see 0005).
 - The server uses only Node built-ins and `zod`; no web framework, no git library, no database.
 - UI components, icons, routing and data fetching are small local code instead of libraries.
 - No native modules and no code that cannot be bundled into a single ESM file.
