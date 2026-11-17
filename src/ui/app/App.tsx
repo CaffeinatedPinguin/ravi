@@ -52,7 +52,12 @@ export function App() {
       ) : pullsMatch?.[1] !== undefined ? (
         <PullsPage key={pullsMatch[1]} repoId={pullsMatch[1]} />
       ) : repoMatch?.[1] !== undefined ? (
-        <ReviewPage key={repoMatch[1]} repoId={repoMatch[1]} targetParam={url.searchParams.get('t')} />
+        <ReviewPage
+          key={repoMatch[1]}
+          repoId={repoMatch[1]}
+          targetParam={url.searchParams.get('t')}
+          worktreeParam={url.searchParams.get('w')}
+        />
       ) : (
         <DashboardPage key={dashboardKey} />
       )}

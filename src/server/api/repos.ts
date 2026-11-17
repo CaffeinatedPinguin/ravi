@@ -7,7 +7,7 @@ import {
   RepoConnectionRequestSchema,
   ScanRequestSchema,
 } from '../../shared/api.ts';
-import type { ApiConnectionCheck, DirList, Repo, RepoView, TestConnectionResponse } from '../../shared/api.ts';
+import type { ApiConnectionCheck, DirList, Repo, RepoView, TestConnectionResponse, Worktree } from '../../shared/api.ts';
 import type { AppContext } from '../app.ts';
 import { readForgeTokens } from '../forges/env.ts';
 import { setEnvVar } from '../forges/env-write.ts';
@@ -15,6 +15,7 @@ import { forgeFor, hostForName, maskToken, repoTokenEnv, resolveToken } from '..
 import { testGitConnection } from '../git/clone.ts';
 import { readRepoInfo } from '../git/repo.ts';
 import { readRefs } from '../git/refs.ts';
+import { listWorktrees, worktreeRoot } from '../git/worktrees.ts';
 import { HttpError } from '../http/router.ts';
 import type { Router } from '../http/router.ts';
 import { addRepo, getRepo, listRepos, removeRepo, scanForRepos, setRepoConnection } from '../store/repos.ts';
@@ -31,10 +32,23 @@ export function registerRepoRoutes(router: Router, { paths }: AppContext): void 
 
   router.post('/api/repos/scan', async ({ body }) => scanForRepos(resolve((await body(ScanRequestSchema)).path)));
 
-  router.get('/api/repos/:id/info', async ({ params }) => readRepoInfo((await getRepo(paths, params.id ?? '')).path));
+  // The repository facts the review screen starts from; `?worktree=` asks for a linked one.
+  router.get('/api/repos/:id/info', async ({ params, query }) => {
+    const repo = await getRepo(paths, params.id ?? '');
+    return readRepoInfo(await worktreeRoot(repo.path, worktreeQuery(query)));
+  });
 
   // Feeds the base branch and range pickers; the id is looked up, never used as a path.
-  router.get('/api/repos/:id/refs', async ({ params }) => readRefs((await getRepo(paths, params.id ?? '')).path));
+  router.get('/api/repos/:id/refs', async ({ params, query }) => {
+    const repo = await getRepo(paths, params.id ?? '');
+    return readRefs(await worktreeRoot(repo.path, worktreeQuery(query)));
+  });
+
+  // A remote clone has no linked worktrees: the clone folder is the only working tree we manage.
+  router.get('/api/repos/:id/worktrees', async ({ params }): Promise<Worktree[]> => {
+    const repo = await getRepo(paths, params.id ?? '');
+    return repo.kind === 'local' ? listWorktrees(repo.path) : [];
+  });
 
   // Connection step of the settings wizard: the token, which never comes back.
   router.put('/api/repos/:id/connection', async ({ params, body }): Promise<RepoView> => {
@@ -66,6 +80,11 @@ export function registerRepoRoutes(router: Router, { paths }: AppContext): void 
       .sort((left, right) => left.localeCompare(right));
     return { path, dirs };
   });
+}
+
+/** An empty `worktree` query value means the connected folder, exactly like an absent parameter. */
+function worktreeQuery(query: URLSearchParams): string | undefined {
+  return query.get('worktree') || undefined;
 }
 
 /** The `.env` variable a token belongs to, for the scope the user picked. */

@@ -64,6 +64,7 @@ The server holds forge tokens and can run git, so it defends against other web p
 - API calls need the session cookie; the CLI opens `/?token=…`, the server sets an HttpOnly cookie and redirects.
 - Mutating calls need the `x-ravi` header (CSRF).
 - File paths are validated against the repository root; git arguments are passed as an array, never through a shell.
+- A worktree path from the UI is accepted only when `git worktree list` of the connected repository names it.
 - Tokens are read only from the `.env` file in the data folder; they are never returned to the UI, logged or exported.
 - Comment images go through `/api/image-proxy` or `/api/assets/:id`, with a host allowlist,
   `nosniff` and a restrictive content security policy.

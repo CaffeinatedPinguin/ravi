@@ -42,11 +42,12 @@ test('default base branch seeds a branch comparison and working-tree targets sta
   // The review still opens on the working tree.
   const kind = page.getByLabel('What to review');
   await expect(kind).toHaveValue('uncommitted');
-  await expect(kind.locator('option')).toHaveCount(5);
+  await expect(kind.locator('option')).toHaveCount(6);
   for (const [value, label] of [
     ['uncommitted', 'Uncommitted changes'],
     ['unstaged', 'Unstaged changes'],
     ['staged', 'Staged changes'],
+    ['all', 'All changes against…'],
   ] as const) {
     await expect(kind.locator(`option[value="${value}"]`)).toHaveText(label);
   }

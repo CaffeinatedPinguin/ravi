@@ -59,6 +59,17 @@
   font: 12px var(--font-mono);
 }
 
+.worktree {
+  width: 200px;
+  max-width: 260px;
+}
+
+.worktree input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 .target,
 .range {
   display: flex;

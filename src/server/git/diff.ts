@@ -12,6 +12,7 @@ import { HttpError } from '../http/router.ts';
 import { GitError, git, gitText } from './exec.ts';
 import { compareTreeOrder, parseRawNumstat, splitPatches } from './parse.ts';
 import { resolveCommit } from './repo.ts';
+import { worktreeRoot } from './worktrees.ts';
 
 /** The hash of the empty tree: lets a repository without commits be diffed like any other. */
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
@@ -48,6 +49,13 @@ export async function resolveTarget(root: string, target: DiffTarget): Promise<R
       const base = await mergeBase(root, await resolveCommit(root, target.base), head);
       return commitRange(base, head);
     }
+    case 'all': {
+      // Commits on the branch plus every uncommitted and untracked file: the worktree side is the
+      // folder itself, so `git diff <base>` shows what the folder has beyond the merge base.
+      const head = await resolveCommit(root, 'HEAD');
+      const base = await mergeBase(root, await resolveCommit(root, target.base), head);
+      return { args: [base], old: { kind: 'commit', sha: base }, new: { kind: 'worktree' } };
+    }
     case 'range': {
       const to = await resolveCommit(root, target.to);
       const from = await resolveCommit(root, target.from);
@@ -76,11 +84,13 @@ async function mergeBase(root: string, left: string, right: string): Promise<str
 }
 
 export async function diffSummary(root: string, options: DiffOptions): Promise<DiffSummary> {
-  const target = await resolveTarget(root, options.target);
-  const output = await gitText(root, ['diff', '--raw', '--numstat', '-z', ...COMMON_ARGS, ...whitespaceArgs(options), ...target.args, '--']);
+  // A requested worktree is accepted only when git lists it; the request value is never a path.
+  const cwd = await worktreeRoot(root, options.target.worktree);
+  const target = await resolveTarget(cwd, options.target);
+  const output = await gitText(cwd, ['diff', '--raw', '--numstat', '-z', ...COMMON_ARGS, ...whitespaceArgs(options), ...target.args, '--']);
   const files = parseRawNumstat(output);
   if (options.includeUntracked && target.new.kind === 'worktree') {
-    files.push(...(await untrackedFiles(root)));
+    files.push(...(await untrackedFiles(cwd)));
   }
   files.sort((left, right) => compareTreeOrder(left.path, right.path));
   return {
@@ -124,7 +134,9 @@ async function countLines(file: string): Promise<number | null> {
 }
 
 export async function diffPatches(root: string, request: PatchesRequest): Promise<Patches> {
-  const target = await resolveTarget(root, request.target);
+  // Same rule as the summary: only a path listed by git can become the git cwd.
+  const cwd = await worktreeRoot(root, request.target.worktree);
+  const target = await resolveTarget(cwd, request.target);
   const patches: Patches = {};
   const tracked = request.files.filter((file) => file.status !== 'untracked');
   const untracked = request.files.filter((file) => file.status === 'untracked');
@@ -132,7 +144,7 @@ export async function diffPatches(root: string, request: PatchesRequest): Promis
   if (tracked.length > 0) {
     // Both names of a rename must be in the pathspec, or git reports it as an unrelated add.
     const paths = tracked.flatMap((file) => (file.oldPath === null ? [file.path] : [file.path, file.oldPath]));
-    const output = await gitText(root, [
+    const output = await gitText(cwd, [
       'diff',
       ...COMMON_ARGS,
       ...whitespaceArgs(request),
@@ -150,7 +162,7 @@ export async function diffPatches(root: string, request: PatchesRequest): Promis
     untracked.map(async (file) => {
       assertRelativePath(file.path);
       // Exit code 1 means "the files differ", which is always the case against /dev/null.
-      const output = await gitText(root, ['diff', '--no-index', ...COMMON_ARGS, '--', '/dev/null', file.path], { okExitCodes: [0, 1] });
+      const output = await gitText(cwd, ['diff', '--no-index', ...COMMON_ARGS, '--', '/dev/null', file.path], { okExitCodes: [0, 1] });
       patches[file.path] = output;
     }),
   );
@@ -163,9 +175,11 @@ function whitespaceArgs(options: { ignoreWhitespace: boolean }): string[] {
 
 /** Lines of a file at one side of the comparison; an absent file (added or deleted) has no lines. */
 export async function readBlobLines(root: string, target: DiffTarget, side: 'old' | 'new', path: string): Promise<string[]> {
+  // A worktree path is validated against git's list before it can become the read root.
+  const cwd = await worktreeRoot(root, target.worktree);
   assertRelativePath(path);
-  const resolved = await resolveTarget(root, target);
-  const content = await readRevision(root, side === 'old' ? resolved.old : resolved.new, path);
+  const resolved = await resolveTarget(cwd, target);
+  const content = await readRevision(cwd, side === 'old' ? resolved.old : resolved.new, path);
   if (content === null) {
     return [];
   }

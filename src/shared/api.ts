@@ -203,6 +203,20 @@ export const RepoInfoSchema = z.object({
 });
 export type RepoInfo = z.infer<typeof RepoInfoSchema>;
 
+/**
+ * One linked worktree of a connected repository, straight from `git worktree list`. `main` is the
+ * first listed one; `current` marks the folder the repository was connected through.
+ */
+export const WorktreeSchema = z.object({
+  path: z.string(),
+  branch: z.string().nullable(),
+  head: z.string().nullable(),
+  main: z.boolean(),
+  current: z.boolean(),
+});
+export type Worktree = z.infer<typeof WorktreeSchema>;
+export const WorktreeListSchema = z.array(WorktreeSchema);
+
 /** One row of the ref picker; the subject makes a commit searchable by what it changed. */
 export const RefCommitSchema = z.object({
   sha: z.string(),
@@ -244,18 +258,32 @@ export type PullRequestFetchResponse = z.infer<typeof PullRequestFetchResponseSc
 
 // ── Diff ────────────────────────────────────────────────────────────────────
 
-/** What is being compared. The server turns it into git arguments and two revisions. */
+/**
+ * What is being compared: the server turns it into git arguments and two revisions. The connected
+ * folder is reviewed unless a worktree is named; that value is never trusted, it must be one of
+ * the paths git itself lists, else the request is a 404.
+ */
+const worktreeField = { worktree: z.string().min(1).optional() };
+
 export const DiffTargetSchema = z.discriminatedUnion('kind', [
   /** Everything not committed yet: HEAD against the working tree. */
-  z.object({ kind: z.literal('uncommitted') }),
+  z.object({ kind: z.literal('uncommitted'), ...worktreeField }),
   /** Index against the working tree. */
-  z.object({ kind: z.literal('unstaged') }),
+  z.object({ kind: z.literal('unstaged'), ...worktreeField }),
   /** HEAD against the index. */
-  z.object({ kind: z.literal('staged') }),
+  z.object({ kind: z.literal('staged'), ...worktreeField }),
   /** What the current branch adds on top of `base` (merge-base to HEAD). */
-  z.object({ kind: z.literal('branch'), base: z.string().min(1) }),
+  z.object({ kind: z.literal('branch'), base: z.string().min(1), ...worktreeField }),
+  /** What the folder holds beyond `base`: merge-base(base, HEAD) against the files on disk. */
+  z.object({ kind: z.literal('all'), base: z.string().min(1), ...worktreeField }),
   /** Two commits or refs; `mergeBase` compares from their common ancestor, like a pull request. */
-  z.object({ kind: z.literal('range'), from: z.string().min(1), to: z.string().min(1), mergeBase: z.boolean().default(false) }),
+  z.object({
+    kind: z.literal('range'),
+    from: z.string().min(1),
+    to: z.string().min(1),
+    mergeBase: z.boolean().default(false),
+    ...worktreeField,
+  }),
 ]);
 export type DiffTarget = z.infer<typeof DiffTargetSchema>;
 
