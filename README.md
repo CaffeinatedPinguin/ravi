@@ -31,38 +31,18 @@ pull requests are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Install
 
-ravi needs Node 22.20 or newer and git.
+ravi needs Node 22.20 or newer and git. Download the installer for your system from the
+[latest release](https://github.com/CaffeinatedPinguin/ravi/releases/latest) and run it. You do not
+need the other files on that page.
 
-Download the installer for your system from the
-[latest release](https://github.com/CaffeinatedPinguin/ravi/releases/latest). You do not need the
-other files on that page.
+| System | Download | Run |
+|---|---|---|
+| Windows | `install-windows.ps1` | `powershell -ExecutionPolicy Bypass -File .\install-windows.ps1` |
+| macOS | `install-macos.sh` | `sh install-macos.sh` |
+| Linux | `install-linux.sh` | `sh install-linux.sh` |
 
-### Windows
-
-Download `install-windows.ps1`, open PowerShell in the folder where the file landed, and run:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
-```
-
-Windows blocks downloaded scripts by default, which is why the command passes
-`-ExecutionPolicy Bypass`. Run it from a PowerShell window so you can see the output.
-
-### macOS
-
-Download `install-macos.sh`, open Terminal in the download folder, and run:
-
-```sh
-sh install-macos.sh
-```
-
-### Linux
-
-Download `install-linux.sh`, open a terminal in the download folder, and run:
-
-```sh
-sh install-linux.sh
-```
+Run the Windows installer from PowerShell in the download folder so you can see the output. Windows
+blocks downloaded scripts by default, which is why the command passes `-ExecutionPolicy Bypass`.
 
 The installers are plain scripts; read one before you run it. Each checks for Node and git,
 downloads `ravi.mjs` from the latest release, writes a launcher, and adds it to your `PATH`. They
