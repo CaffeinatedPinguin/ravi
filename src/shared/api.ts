@@ -274,6 +274,8 @@ export const DiffTargetSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('staged'), ...worktreeField }),
   /** What the current branch adds on top of `base` (merge-base to HEAD). */
   z.object({ kind: z.literal('branch'), base: z.string().min(1), ...worktreeField }),
+  /** What the folder holds beyond `base`: merge-base(base, HEAD) against the files on disk. */
+  z.object({ kind: z.literal('all'), base: z.string().min(1), ...worktreeField }),
   /** Two commits or refs; `mergeBase` compares from their common ancestor, like a pull request. */
   z.object({
     kind: z.literal('range'),

@@ -68,4 +68,44 @@ describe('diff of a linked worktree', () => {
 
     expect(await readBlobLines(repo, target, 'new', 'a.txt')).toEqual(['one', 'changed again']);
   });
+
+  it('lists commits, uncommitted edits and untracked files with the `all` target', async () => {
+    const repo = temp('diff-all-repo');
+    git(repo, ['init', '-q', '-b', 'main']);
+    writeFileSync(join(repo, 'committed.txt'), 'one\ntwo\n');
+    writeFileSync(join(repo, 'edited.txt'), 'alpha\nbeta\n');
+    git(repo, ['add', '.']);
+    git(repo, ['commit', '--no-verify', '-q', '-m', 'initial']);
+    const linked = join(temp('diff-all-linked'), 'wt');
+    git(repo, ['worktree', 'add', '-q', '-b', 'topic', linked]);
+
+    // One commit on the worktree branch...
+    writeFileSync(join(linked, 'committed.txt'), 'one\ncommitted in the worktree\n');
+    git(linked, ['add', '.']);
+    git(linked, ['commit', '--no-verify', '-q', '-m', 'worktree commit']);
+    // ...an uncommitted edit and an untracked file on top of it.
+    writeFileSync(join(linked, 'edited.txt'), 'alpha\nedited\n');
+    writeFileSync(join(linked, 'new.txt'), 'brand new\n');
+
+    const target = { kind: 'all' as const, base: 'main', worktree: linked };
+    const summary = await diffSummary(repo, { target, ignoreWhitespace: false, includeUntracked: true });
+    expect(summary.files.map((file) => file.path).sort()).toEqual(['committed.txt', 'edited.txt', 'new.txt']);
+    expect(summary.files.find((file) => file.path === 'new.txt')?.status).toBe('untracked');
+    // The committed change and the uncommitted edit both count against the merge base.
+    expect(summary.files.find((file) => file.path === 'committed.txt')?.status).toBe('modified');
+    expect(summary.files.find((file) => file.path === 'edited.txt')?.status).toBe('modified');
+
+    // The worktree side is the folder on disk, so a later edit must change the fingerprint.
+    const before = await diffFingerprint(repo, target);
+    writeFileSync(join(linked, 'edited.txt'), 'alpha\nedited again\n');
+    expect(await diffFingerprint(repo, target)).not.toBe(before);
+
+    // Without a worktree the same target reviews the connected folder, which has no changes.
+    const mainSummary = await diffSummary(repo, {
+      target: { kind: 'all', base: 'main' },
+      ignoreWhitespace: false,
+      includeUntracked: true,
+    });
+    expect(mainSummary.files).toEqual([]);
+  });
 });

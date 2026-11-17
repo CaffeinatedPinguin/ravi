@@ -32,17 +32,20 @@ import { SaveStatus } from './SaveStatus.tsx';
 import styles from './ReviewPage.module.css';
 import { LOCAL_REVIEW_SHORTCUTS } from './shortcuts.ts';
 import { TargetPicker } from './TargetPicker.tsx';
-import { decodeTarget, encodeTarget, showsWorkingTree } from './target.ts';
+import { decodeTarget, encodeTarget, showsWorkingTree, targetPath } from './target.ts';
 import { formatRefreshedAgo, useAutoRefresh } from './useAutoRefresh.ts';
 import { useReviewStore } from './useReviewStore.ts';
+import { WorktreePicker } from './WorktreePicker.tsx';
 
 type ImportSeed = { markdown: string; fileName: string };
 
-type ReviewPageProps = { repoId: string; targetParam: string | null };
+type ReviewPageProps = { repoId: string; targetParam: string | null; worktreeParam: string | null };
 
-export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
+export function ReviewPage({ repoId, targetParam, worktreeParam }: ReviewPageProps) {
   const { settings, update } = useSettings();
-  const target = useMemo(() => decodeTarget(targetParam), [targetParam]);
+  const target = useMemo(() => decodeTarget(targetParam, worktreeParam), [targetParam, worktreeParam]);
+  const worktree = target.worktree;
+  const worktreeQuery = worktree === undefined ? '' : `?worktree=${encodeURIComponent(worktree)}`;
   const options: DiffOptions = useMemo(
     () => ({ target, ignoreWhitespace: settings.ignoreWhitespace, includeUntracked: settings.showUntracked && showsWorkingTree(target) }),
     [target, settings.ignoreWhitespace, settings.showUntracked],
@@ -50,8 +53,13 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   const optionsKey = JSON.stringify(options);
 
   const repos = useAsync('repos', (signal) => apiGet('/api/repos', RepoListSchema, signal));
-  const info = useAsync(`info:${repoId}`, (signal) => apiGet(`/api/repos/${repoId}/info`, RepoInfoSchema, signal));
-  const refs = useAsync(`refs:${repoId}`, (signal) => apiGet(`/api/repos/${repoId}/refs`, RefsSchema, signal));
+  // A worktree has its own branch and refs, so both answers are keyed and fetched for that folder.
+  const info = useAsync(`info:${repoId}:${worktree ?? ''}`, (signal) =>
+    apiGet(`/api/repos/${repoId}/info${worktreeQuery}`, RepoInfoSchema, signal),
+  );
+  const refs = useAsync(`refs:${repoId}:${worktree ?? ''}`, (signal) =>
+    apiGet(`/api/repos/${repoId}/refs${worktreeQuery}`, RefsSchema, signal),
+  );
   const summary = useAsync(`diff:${repoId}:${optionsKey}`, () => apiSend('POST', `/api/repos/${repoId}/diff`, options, DiffSummarySchema));
 
   const repo = repos.data?.find((candidate) => candidate.id === repoId);
@@ -62,7 +70,8 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   useEffect(() => session?.setMode(settings.viewMode), [session, settings.viewMode]);
 
   // One store per review target. The server route may not exist yet in this worktree; tests mock it.
-  const repoPath = repo?.path;
+  // Drafts of a linked worktree are stored under its own path, never under the connected folder.
+  const repoPath = worktree ?? repo?.path;
   const reviewTarget = useMemo<ReviewTarget | null>(
     () => (repoPath === undefined ? null : { kind: 'local', repoPath, target: encodeTarget(target) }),
     [repoPath, target],
@@ -93,11 +102,12 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   const linkContext = useMemo<LinkContext>(
     () => ({
       mode: settings.linkMode,
-      repoPath: repo?.kind === 'local' ? repo.path : null,
+      // File links point at the folder being reviewed, which may be a linked worktree.
+      repoPath: repo?.kind === 'local' ? (worktree ?? repo.path) : null,
       urlTemplate: fileUrl.data?.fileUrlTemplate ?? null,
       oldUrlTemplate: fileUrl.data?.oldFileUrlTemplate ?? null,
     }),
-    [settings.linkMode, repo?.kind, repo?.path, fileUrl.data],
+    [settings.linkMode, repo?.kind, repo?.path, fileUrl.data, worktree],
   );
 
   const diffView = useRef<DiffViewHandle>(null);
@@ -183,6 +193,8 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   };
 
   const repoName = repo?.name ?? repoId;
+  // Two worktrees can share the same comparison, so the export name carries the folder to tell them apart.
+  const worktreeName = worktree === undefined ? null : (worktree.split(/[\\/]/).filter(Boolean).at(-1) ?? null);
   const hasContent = store !== null && (store.document.comments.length > 0 || (store.document.summary ?? '').trim() !== '');
   const generalCount = store?.document.comments.filter((comment) => comment.path === null).length ?? 0;
 
@@ -225,11 +237,14 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
       if (!exported) {
         return;
       }
-      downloadMarkdown(reviewFileName(repoName, encodeTarget(target)), exported.markdown);
+      downloadMarkdown(
+        reviewFileName(repoName, worktreeName === null ? encodeTarget(target) : `${encodeTarget(target)}-${worktreeName}`),
+        exported.markdown,
+      );
     } catch (reason) {
       showToast({ message: errorMessage(reason, 'Could not save the review') });
     }
-  }, [hasContent, exportReview, repoName, target]);
+  }, [hasContent, exportReview, repoName, target, worktreeName]);
 
   // The last load is the moment the "updated N s ago" label counts from.
   const updatedAt = useAutoRefresh({ repoId, target, loaded: summary.data, onReload: summary.reload });
@@ -244,7 +259,8 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const treeWidth = previewWidth ?? settings.treeWidth;
 
-  const setTarget = (next: DiffTarget) => navigate(`/repo/${repoId}?t=${encodeURIComponent(encodeTarget(next))}`);
+  // Every comparison change keeps the selected worktree; only the Worktree selector drops it.
+  const setTarget = (next: DiffTarget) => navigate(targetPath(repoId, next));
   const goToFile = useCallback(
     (fileIndex: number) => {
       if (fileIndex >= 0 && fileIndex < fileCount) {
@@ -313,7 +329,12 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
           }))}
           onChange={(id) => navigate(`/repo/${id}`)}
         />
-        {info.data?.branch && ( <span className={styles.branch}>{info.data.branch}</span>)}
+        <WorktreePicker
+          repoId={repoId}
+          target={target}
+          info={info.data}
+          fallback={info.data?.branch ? <span className={styles.branch}>{info.data.branch}</span> : null}
+        />
         <TargetPicker key={encodeTarget(target)} target={target} info={info.data} refs={refs.data} onChange={setTarget} />
         <span className={styles.spacer} />
         <IconButton
@@ -415,7 +436,7 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
             <DiffPane
               session={session}
               store={store}
-              repoPath={repo?.kind === 'local' ? repo.path : null}
+              repoPath={repo?.kind === 'local' ? (worktree ?? repo.path) : null}
               treeWidth={treeWidth}
               activeFile={activeFile}
               mode={settings.viewMode}

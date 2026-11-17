@@ -49,6 +49,13 @@ export async function resolveTarget(root: string, target: DiffTarget): Promise<R
       const base = await mergeBase(root, await resolveCommit(root, target.base), head);
       return commitRange(base, head);
     }
+    case 'all': {
+      // Commits on the branch plus every uncommitted and untracked file: the worktree side is the
+      // folder itself, so `git diff <base>` shows what the folder has beyond the merge base.
+      const head = await resolveCommit(root, 'HEAD');
+      const base = await mergeBase(root, await resolveCommit(root, target.base), head);
+      return { args: [base], old: { kind: 'commit', sha: base }, new: { kind: 'worktree' } };
+    }
     case 'range': {
       const to = await resolveCommit(root, target.to);
       const from = await resolveCommit(root, target.from);

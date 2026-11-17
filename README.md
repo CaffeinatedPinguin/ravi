@@ -20,6 +20,8 @@ pull requests are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md).
   own pull requests, and a review-later list.
 - **Local review:** uncommitted, staged, unstaged, branch against base, and commit ranges. File tree,
   split or unified view, syntax highlighting, ignored whitespace, and expandable context.
+- **Linked worktrees:** review a `git worktree add` folder with all its commits, uncommitted edits
+  and untracked files against a base branch.
 - **Pull request review:** GitHub.com and GitLab.com, file threads, the conversation, review-later,
   and a three-dot diff like the forge's "Files changed" view.
 - **Comments:** drafts, replies, edits, images, outdated markers, and Approve / Request changes.
@@ -88,6 +90,13 @@ ravi opens the review in your browser and keeps running in that terminal. Press 
 Running `ravi` again while it is running only opens the browser. On the first run, the dashboard
 asks you to add a repository: choose a local folder or paste a GitHub/GitLab URL. Application data,
 including the token file, lives in the install folder (see the table above).
+
+### Review linked worktrees
+
+When the repository has `git worktree add` folders, the **Worktree** selector in the review top bar
+switches to one of them. Picking a linked folder starts **All changes against…** from the default base
+branch, so the review shows its commits, uncommitted edits and untracked files; choosing the connected
+folder goes back to it. Comments stay drafts under the folder being reviewed.
 
 ## Tokens and permissions
 
