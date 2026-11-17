@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -14,7 +14,8 @@ afterAll(() => {
 });
 
 function temp(prefix: string): string {
-  const dir = mkdtempSync(join(tmpdir(), `ravi-${prefix}-`));
+  // realpathSync.native expands a Windows 8.3 name (RUNNER~1); git prints the long form and compares textually.
+  const dir = realpathSync.native(mkdtempSync(join(tmpdir(), `ravi-${prefix}-`)));
   tempDirs.push(dir);
   return dir;
 }
