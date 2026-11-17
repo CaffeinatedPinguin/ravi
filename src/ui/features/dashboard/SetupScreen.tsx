@@ -27,7 +27,7 @@ export function SetupScreen({ notice }: { notice: string | null }) {
             </p>
           )}
           <div className={styles.setupActions}>
-            <Button variant="primary" onClick={() => navigate('/settings#repositories')}>
+            <Button variant="primary" onClick={() => navigate('/repositories')}>
               Add your first repository
             </Button>
             <Button onClick={() => navigate('/settings#accounts')}>How tokens work</Button>

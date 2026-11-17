@@ -1,5 +1,5 @@
 /**
- * Settings → Repositories and Accounts in the built app.
+ * The Repositories page and Settings → Accounts in the built app.
  *
  * The native folder dialog cannot run in a headless browser; the server replaces it with the path
  * in RAVI_E2E_PICK_FOLDER when RAVI_E2E=1. `startApp` passes the parent environment on, so setting
@@ -23,11 +23,16 @@ let forge: FakeForge;
 let app: AppServer;
 let pickedRepo = '';
 let pastedRepo = '';
+let scanRoot = '';
 
 test.beforeAll(async () => {
   fixture = createFixture();
   pickedRepo = makeRepository(join(fixture.root, 'picked-repo'));
   pastedRepo = makeRepository(join(fixture.root, 'pasted-repo'));
+  // A folder that is not a repository itself but holds two of them.
+  scanRoot = join(fixture.root, 'scan-root');
+  makeRepository(join(scanRoot, 'found-one'));
+  makeRepository(join(scanRoot, 'found-two'));
   process.env.RAVI_E2E_PICK_FOLDER = pickedRepo;
   forge = await startFakeForge();
   app = await startApp(fixture, forge.url);
@@ -43,8 +48,33 @@ test.afterAll(async () => {
 test.beforeEach(async ({ page }) => {
   // Opening the CLI's URL sets the session cookie.
   await page.goto(app.url);
-  await page.goto(`${app.baseUrl}/settings`);
+  await page.goto(`${app.baseUrl}/repositories`);
   await expect(page.getByRole('heading', { name: 'Repositories', exact: true })).toBeVisible();
+});
+
+test('Settings holds only global settings; repositories have their own page', async ({ page }) => {
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Repositories', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add repository' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Repositories', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Repositories', exact: true })).toBeVisible();
+});
+
+test('finds the repositories inside a folder and adds only the chosen one', async ({ page }) => {
+  await openWizard(page);
+  await page.getByLabel('Paste path').check();
+  await page.getByLabel('Folder path').fill(scanRoot);
+  await page.getByRole('button', { name: 'Find repositories inside' }).click();
+
+  const found = page.getByRole('group', { name: 'Repositories found' });
+  await expect(found.getByText('2 repositories found', { exact: false })).toBeVisible();
+  await found.getByRole('checkbox').first().check();
+  await found.getByRole('button', { name: 'Add selected (1)' }).click();
+
+  await expect(page.getByRole('region', { name: 'Add repository' })).toHaveCount(0);
+  await expect(page.getByText('found-one', { exact: true })).toBeVisible();
+  await expect(page.getByText('found-two', { exact: true })).toHaveCount(0);
 });
 
 test('adds a local folder through Choose folder and requires a transport', async ({ page }) => {
@@ -96,6 +126,7 @@ test('adds a local folder through Paste path', async ({ page }) => {
 });
 
 test('saves a host token and shows only the masked hint', async ({ page }) => {
+  await page.goto(`${app.baseUrl}/settings`);
   await expect(page.getByRole('heading', { name: 'Accounts', exact: true })).toBeVisible();
   await page.getByRole('heading', { name: 'Accounts', exact: true }).scrollIntoViewIfNeeded();
   await shot(page, app.baseUrl, 'settings-accounts');

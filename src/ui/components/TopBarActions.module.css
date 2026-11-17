@@ -4,21 +4,30 @@
   gap: 2px;
 }
 
-.iconButton {
+.navButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  gap: 6px;
   height: 28px;
-  padding: 0;
+  padding: 0 8px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
   cursor: pointer;
 }
 
-.iconButton:hover {
+.navButton:hover {
   background: var(--bg-hover);
   color: var(--text);
+}
+
+/* On narrow windows only the icons stay; the tooltips and accessible names still say what they are. */
+@media (max-width: 900px) {
+  .label {
+    display: none;
+  }
 }

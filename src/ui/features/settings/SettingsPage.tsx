@@ -14,7 +14,6 @@ import { Button, Segmented, Toggle } from '../../components/controls.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { AccountsSettingsSection } from './AccountsSection.tsx';
 import { debounce } from './debounce.ts';
-import { RepositoriesSection } from './RepositoriesSection.tsx';
 import { Section } from './Section.tsx';
 import styles from './SettingsPage.module.css';
 import { validateBaseBranch, validateListEntry } from './validation.ts';
@@ -65,7 +64,19 @@ export function SettingsPage() {
 
       <main className={styles.body}>
         <h1 className={styles.heading}>Settings</h1>
-        <p className={styles.lead}>Every change is saved as you make it.</p>
+        <p className={styles.lead}>
+          These settings apply everywhere, and every change is saved as you make it. Connected repositories are on the{' '}
+          <a
+            href="/repositories"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('/repositories');
+            }}
+          >
+            Repositories
+          </a>{' '}
+          page.
+        </p>
 
         <Section title="Appearance">
           <Row label="Theme">
@@ -93,7 +104,6 @@ export function SettingsPage() {
           </Row>
         </Section>
 
-        <RepositoriesSection />
         <AccountsSettingsSection />
 
         <Section title="Review">
