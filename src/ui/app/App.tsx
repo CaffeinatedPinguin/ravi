@@ -5,6 +5,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage.tsx';
 import { InboxPage } from '../features/dashboard/InboxPage.tsx';
 import { PullRequestPage } from '../features/pulls/PullRequestPage.tsx';
 import { PullsPage } from '../features/pulls/PullsPage.tsx';
+import { RepositoriesPage } from '../features/repositories/RepositoriesPage.tsx';
 import { ReviewPage } from '../features/review/ReviewPage.tsx';
 import { SettingsPage } from '../features/settings/SettingsPage.tsx';
 import { apiSend } from './api.ts';
@@ -18,12 +19,15 @@ export function App() {
   const pullsMatch = /^\/repo\/([^/]+)\/pulls$/.exec(url.pathname);
   const repoMatch = /^\/repo\/([^/]+)$/.exec(url.pathname);
   const settingsMatch = url.pathname === '/settings';
+  const repositoriesMatch = url.pathname === '/repositories';
   const inboxMatch = url.pathname === '/inbox';
 
   return (
     <SettingsProvider>
       {settingsMatch ? (
         <SettingsPage />
+      ) : repositoriesMatch ? (
+        <RepositoriesPage />
       ) : inboxMatch ? (
         <InboxPage />
       ) : pullMatch?.[1] !== undefined ? (

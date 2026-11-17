@@ -15,8 +15,10 @@ import type { RepoTransport, RepoView, TestConnectionResponse } from '../../../s
 import { apiGet, apiSend } from '../../app/api.ts';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
-import { Section } from './Section.tsx';
-import styles from './SettingsPage.module.css';
+import { Section } from '../settings/Section.tsx';
+import styles from '../settings/SettingsPage.module.css';
+import { FoundRepos } from './FoundRepos.tsx';
+import { connectedKeys, scanFolder } from './scan.ts';
 
 const messageOf = (reason: unknown): string => (reason instanceof Error ? reason.message : 'Something went wrong');
 
@@ -61,7 +63,7 @@ export function RepositoriesSection() {
 
   return (
     <Section
-      title="Repositories"
+      title="Connected repositories"
       action={
         <Button variant="primary" icon="plus" onClick={() => setWizardRepo(null)}>
           Add repository
@@ -122,7 +124,11 @@ export function RepositoriesSection() {
         <RepositoryWizard
           key={wizardRepo?.id ?? 'new'}
           repo={wizardRepo}
-          onCancel={() => setWizardRepo(undefined)}
+          connected={connectedKeys((repos.data ?? []).map((candidate) => candidate.path))}
+          onCancel={() => {
+            setWizardRepo(undefined);
+            repos.reload();
+          }}
           onSaved={() => {
             setWizardRepo(undefined);
             repos.reload();
@@ -152,11 +158,13 @@ function ConnectionResult({ result }: { result: TestConnectionResponse }) {
 
 type WizardProps = {
   repo: RepoView | null;
+  /** `pathKey`s of the folders that are already connected, for the "find repositories" list. */
+  connected: ReadonlySet<string>;
   onCancel: () => void;
   onSaved: () => void;
 };
 
-function RepositoryWizard({ repo, onCancel, onSaved }: WizardProps) {
+function RepositoryWizard({ repo, connected, onCancel, onSaved }: WizardProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [source, setSource] = useState<'local' | 'remote'>(repo?.kind === 'remote' ? 'remote' : 'local');
   const [paste, setPaste] = useState(repo !== null);
@@ -168,6 +176,8 @@ function RepositoryWizard({ repo, onCancel, onSaved }: WizardProps) {
   const [token, setToken] = useState('');
   const [hostScope, setHostScope] = useState(repo?.tokenScope === 'host');
   const [picking, setPicking] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [found, setFound] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<TestConnectionResponse | null>(null);
@@ -189,6 +199,19 @@ function RepositoryWizard({ repo, onCancel, onSaved }: WizardProps) {
       setError(messageOf(reason));
     } finally {
       setPicking(false);
+    }
+  };
+
+  /** Looks for git repositories inside the chosen folder, so several can be connected at once. */
+  const findInside = async () => {
+    setScanning(true);
+    setError(null);
+    try {
+      setFound(await scanFolder(path.trim()));
+    } catch (reason) {
+      setError(messageOf(reason));
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -321,6 +344,31 @@ function RepositoryWizard({ repo, onCancel, onSaved }: WizardProps) {
                 </Button>
               )}
               {path !== '' && <code className={styles.mono}>{path}</code>}
+              {repo === null && (
+                <>
+                  <p className={styles.hint}>
+                    The folder can also hold several repositories: find them and choose which to add.
+                  </p>
+                  <div className={styles.wizardActions}>
+                    <Button
+                      onClick={() => void findInside()}
+                      disabled={path.trim() === '' || scanning}
+                      aria-busy={scanning}
+                    >
+                      {scanning ? 'Searching…' : 'Find repositories inside'}
+                    </Button>
+                  </div>
+                </>
+              )}
+              {found !== null && (
+                <FoundRepos
+                  folder={path.trim()}
+                  found={found}
+                  connected={connected}
+                  onAdded={onSaved}
+                  onCancel={() => setFound(null)}
+                />
+              )}
             </div>
           ) : (
             <div className={styles.field}>
