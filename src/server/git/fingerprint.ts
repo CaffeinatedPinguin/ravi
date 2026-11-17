@@ -9,6 +9,7 @@ import type { DiffTarget } from '../../shared/api.ts';
 import { resolveTarget } from './diff.ts';
 import { GitError, gitText } from './exec.ts';
 import { resolveCommit } from './repo.ts';
+import { worktreeRoot } from './worktrees.ts';
 
 /**
  * A diff can list thousands of paths; stat is cheap, but an unbounded `Promise.all` would exhaust
@@ -17,7 +18,9 @@ import { resolveCommit } from './repo.ts';
 const STAT_BATCH = 64;
 
 export async function diffFingerprint(root: string, target: DiffTarget): Promise<string> {
-  const resolved = await resolveTarget(root, target);
+  // The worktree path is only a lookup key; git's own list decides which folder is inspected.
+  const cwd = await worktreeRoot(root, target.worktree);
+  const resolved = await resolveTarget(cwd, target);
 
   // A comparison between two commits cannot be affected by the working tree or the index,
   // so the two ids fully describe it (and are cheaper to read than hashing a diff).
@@ -27,10 +30,10 @@ export async function diffFingerprint(root: string, target: DiffTarget): Promise
 
   // Independent calls: run them together instead of paying the process round-trips in sequence.
   const [head, status, raw, worktree] = await Promise.all([
-    headId(root),
-    gitText(root, ['status', '--porcelain=v2', '-z', '--untracked-files=all']),
-    gitText(root, ['diff', '--raw', '-z', ...resolved.args, '--']),
-    resolved.new.kind === 'worktree' ? worktreeContent(root, resolved.args) : Promise.resolve(''),
+    headId(cwd),
+    gitText(cwd, ['status', '--porcelain=v2', '-z', '--untracked-files=all']),
+    gitText(cwd, ['diff', '--raw', '-z', ...resolved.args, '--']),
+    resolved.new.kind === 'worktree' ? worktreeContent(cwd, resolved.args) : Promise.resolve(''),
   ]);
 
   const hash = createHash('sha256');

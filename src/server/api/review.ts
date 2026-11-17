@@ -1,7 +1,7 @@
 /** Routes for review documents: load, save, Markdown export/import and the attached images. */
 import { Buffer } from 'node:buffer';
 import { randomBytes } from 'node:crypto';
-import { isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import {
   AssetUploadRequestSchema,
   ReviewExportRequestSchema,
@@ -13,6 +13,7 @@ import type { AssetUploadResponse, DiffFile, DiffTarget } from '../../shared/api
 import type { CommentSide, ImportError, ImportedComment, ReviewComment, ReviewDocument, ReviewTarget } from '../../shared/review.ts';
 import type { AppContext } from '../app.ts';
 import { diffSummary, readBlobLines } from '../git/diff.ts';
+import { listWorktrees, samePath } from '../git/worktrees.ts';
 import { HttpError, raw } from '../http/router.ts';
 import type { Router } from '../http/router.ts';
 import type { Paths } from '../paths.ts';
@@ -40,7 +41,7 @@ export function registerReviewRoutes(router: Router, { paths }: AppContext): voi
 
   router.post('/api/reviews/save', async ({ body }) => {
     const request = await body(ReviewSaveRequestSchema);
-    assertTargetBelongsToRepo(request.document.target, await repoRoot(request.repoId));
+    await assertTargetBelongsToRepo(request.document.target, await repoRoot(request.repoId));
     await writeReview(paths, request.repoId, request.document);
     return request.document;
   });
@@ -328,19 +329,20 @@ function newCommentId(): string {
   return `l-${randomBytes(6).toString('hex')}`;
 }
 
-function assertTargetBelongsToRepo(target: ReviewTarget, repoRoot: string): void {
+/**
+ * Drafts of a linked worktree are legitimate: its path is one git prints for this repository. Any
+ * other path is refused, so a review document cannot point outside the connected repository.
+ */
+async function assertTargetBelongsToRepo(target: ReviewTarget, repoRoot: string): Promise<void> {
   if (target.kind !== 'local') {
     return;
   }
-  if (!samePath(target.repoPath, repoRoot)) {
-    throw new HttpError(400, 'Review target does not belong to this repository');
+  if (samePath(target.repoPath, repoRoot)) {
+    return;
   }
-}
-
-/** Windows paths differ only in case and separators; compare them the way the OS does. */
-function samePath(left: string, right: string): boolean {
-  const normalize = (value: string): string => resolve(value).replaceAll('\\', '/').replace(/\/+$/, '');
-  const a = normalize(left);
-  const b = normalize(right);
-  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+  const worktrees = await listWorktrees(repoRoot);
+  if (worktrees.some((worktree) => samePath(worktree.path, target.repoPath))) {
+    return;
+  }
+  throw new HttpError(400, 'Review target does not belong to this repository');
 }
