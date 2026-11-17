@@ -89,6 +89,44 @@ Running `ravi` again while it is running only opens the browser. On the first ru
 asks you to add a repository: choose a local folder or paste a GitHub/GitLab URL. Application data,
 including the token file, lives in the install folder (see the table above).
 
+## Tokens and permissions
+
+Git can fetch code with your own credentials (SSH keys or HTTPS), but pull requests, their
+conversations and sending a review are not part of git: they come from the GitHub/GitLab API, which
+accepts only a token. Without a token ravi still reviews local changes, a branch against its base and
+commit ranges; pull request features need the token.
+
+For a GitHub fine-grained token, limit it to the repositories you review:
+
+| Permission | What ravi uses it for |
+|---|---|
+| Pull requests: Read and write | Lists and reads pull requests and their threads; write is used only by Send, for inline comments, replies, edits and Approve / Request changes. On a pull request it also covers the conversation comments. |
+| Contents: Read-only | Git over HTTPS fetches the pull request's commits and files; private repositories need it. |
+| Metadata: Read-only | Added automatically by GitHub. |
+
+A classic token works too: scope `repo` for private repositories, or `public_repo` for public ones only.
+
+For GitLab, a personal access token:
+
+| Permission | What ravi uses it for |
+|---|---|
+| `api` | Reads merge requests, their discussions and approvals and, on Send, writes notes, uploads pasted images and approves; git over HTTPS is covered by it. |
+
+`read_api` + `read_repository` is enough for reading only; Send will fail. Nothing else is needed: no
+admin, no workflow, no user or email permissions. ravi never writes to the forge except through Send.
+
+ravi keeps tokens only in the `.env` file in its data folder, the install folder from the table above;
+`ravi --help` prints it. Add a token in Settings -> Accounts (one per host, used for every repository
+on that host) or in Repositories (one for a single repository, which wins over the host token). ravi
+shows only the last four characters afterwards and never sends a token to the browser, logs or
+exports. For read-only use, drop the write level (Pull requests: Read-only): listing and reading work
+and Send is refused by GitHub.
+
+Two common problems: "token missing" on the dashboard means no token for that host; on the
+Repositories page, Test connection shows Git and API results separately, and Git OK with API failed
+means the token is missing or lacks the Pull requests permission. ravi clones remote repositories
+over HTTPS using the token; local folders use your own git credentials.
+
 ## Update and uninstall
 
 To update, run the installer again. It compares your version with the latest release and downloads
