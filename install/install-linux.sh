@@ -177,6 +177,8 @@ else
 
   if [ "$installed_version" = "$latest_version" ]; then
     say "You already have the latest version ($installed_version)."
+    # A local build has the same version as the release, so the version check alone would skip it.
+    say "To install a build from disk instead (for example after pnpm build), pass it: sh install-linux.sh ./dist/ravi.mjs"
     step 4 "Skipped: nothing to download"
   else
     download_url="https://github.com/$REPO/releases/download/$tag/ravi.mjs"

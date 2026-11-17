@@ -156,6 +156,8 @@ try {
 
         if ($installedVersion -eq $latestVersion) {
             Write-Host "  You already have the latest version ($installedVersion)." -ForegroundColor Green
+            # A local build has the same version as the release, so the version check alone would skip it.
+            Write-Host '  To install a build from disk instead (for example after pnpm build), pass it: -LocalFile .\dist\ravi.mjs'
             Write-Step 4 'Skipped: nothing to download'
         } else {
             $downloadUrl = "https://github.com/$Repo/releases/download/$tag/ravi.mjs"
