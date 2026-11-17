@@ -371,13 +371,17 @@ export function ReviewPage({ repoId, targetParam }: ReviewPageProps) {
         {store && (
           <Menu
             label="Export"
-            title="Export the review Markdown (Shift+C, Shift+S, Shift+I)"
+            title="Export the review as Markdown (Shift+C, Shift+S)"
             items={[
               { label: 'Copy for AI', disabled: !hasContent, onSelect: () => void copyReview() },
               { label: 'Save as file', disabled: !hasContent, onSelect: () => void saveReview() },
-              { label: 'Import…', onSelect: () => openImport() },
             ]}
           />
+        )}
+        {store && (
+          <Button title="Import review comments from Markdown (Shift+I)" onClick={() => openImport()}>
+            Import
+          </Button>
         )}
         {store && <SaveStatus status={store.saveStatus} refreshedAgo={refreshedAgo} onRetry={() => void store.retry()} />}
         <IconButton

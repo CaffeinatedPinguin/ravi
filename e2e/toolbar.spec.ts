@@ -39,9 +39,9 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByRole('navigation', { name: 'Changed files' })).toBeVisible();
 });
 
-test('Export menu replaces three buttons, saves a file, keeps Shift+C and shows the save status', async ({ page }) => {
-  // No separate transfer buttons and no "Updated …" label: both live in the menu and the tooltip.
-  await expect(page.getByRole('button', { name: 'Import', exact: true })).toHaveCount(0);
+test('Export menu holds Copy and Save, Import is its own button, Shift+C works and the save status shows', async ({ page }) => {
+  // Import is a button of its own; Copy and Save live in the Export menu; no "Updated …" label.
+  await expect(page.getByRole('button', { name: 'Import', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Copy', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
   await expect(page.getByText(/^Updated (just now|\d+ s ago|\d+ min ago)$/)).toHaveCount(0);
@@ -51,8 +51,8 @@ test('Export menu replaces three buttons, saves a file, keeps Shift+C and shows 
   await exportButton.click();
   const menu = page.getByRole('menu', { name: 'Export' });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('menuitem')).toHaveCount(3);
-  await expect(menu.getByRole('menuitem')).toHaveText(['Copy for AI', 'Save as file', 'Import…']);
+  await expect(menu.getByRole('menuitem')).toHaveCount(2);
+  await expect(menu.getByRole('menuitem')).toHaveText(['Copy for AI', 'Save as file']);
   await shotLive(page, 'toolbar-export-menu');
 
   // Escape and an outside click both close the menu without choosing anything.

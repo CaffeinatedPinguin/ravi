@@ -41,7 +41,7 @@ test(
       await expect(page.getByRole('status').filter({ hasText: 'Copied 2 comments for AI' })).toBeVisible();
       const markdown = await page.evaluate<string>('navigator.clipboard.readText()');
 
-      await exportAction(page, 'Import…');
+      await page.getByRole('button', { name: 'Import', exact: true }).click();
       await page.getByRole('textbox', { name: 'Review Markdown to import' }).fill(markdown);
       await page.getByRole('button', { name: 'Preview' }).click();
       // The bug shows "0 added · 1 edited · 1 skipped": only the reply is wrongly changed.
@@ -66,8 +66,8 @@ async function focusOnlyLongFile(page: Page): Promise<void> {
   await expect(page.locator('[aria-label="Diff"]')).toContainText('changed(4)');
 }
 
-/** The Markdown transfer buttons now live in the toolbar's Export menu. */
-async function exportAction(page: Page, name: 'Copy for AI' | 'Import…' | 'Save as file'): Promise<void> {
+/** Copy and Save live in the toolbar's Export menu; Import is a button of its own. */
+async function exportAction(page: Page, name: 'Copy for AI' | 'Save as file'): Promise<void> {
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   await page.getByRole('menuitem', { name, exact: true }).click();
 }
