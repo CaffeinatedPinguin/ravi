@@ -24,7 +24,7 @@ import { useRepoCards } from './useRepoCards.ts';
 import styles from './DashboardPage.module.css';
 import { SetupScreen } from './SetupScreen.tsx';
 
-export function DashboardPage({ notice }: { notice: string | null }) {
+export function DashboardPage() {
   const repos = useAsync('repos', (signal) => apiGet('/api/repos', RepoListSchema, signal));
 
   if (repos.error !== null) {
@@ -44,11 +44,7 @@ export function DashboardPage({ notice }: { notice: string | null }) {
       </Frame>
     );
   }
-  return startView(repos.data) === 'setup' ? (
-    <SetupScreen notice={notice} />
-  ) : (
-    <DashboardView repos={repos.data} notice={notice} />
-  );
+  return startView(repos.data) === 'setup' ? <SetupScreen /> : <DashboardView repos={repos.data} />;
 }
 
 function Frame({ children }: { children: ReactNode }) {
@@ -64,7 +60,7 @@ function Frame({ children }: { children: ReactNode }) {
   );
 }
 
-function DashboardView({ repos, notice }: { repos: readonly Repo[]; notice: string | null }) {
+function DashboardView({ repos }: { repos: readonly Repo[] }) {
   const forges = useAsync('forges', (signal) => apiGet('/api/forges', ForgeStatusListSchema, signal));
   const later = useAsync('review-later', (signal) => apiGet('/api/review-later', ReviewLaterListSchema, signal));
   const [refreshKey, setRefreshKey] = useState(0);
@@ -200,9 +196,9 @@ function DashboardView({ repos, notice }: { repos: readonly Repo[]; notice: stri
 
       <main className={styles.body}>
         <h1 className={styles.srOnly}>ravi</h1>
-        {(notice ?? starError) !== null && (
+        {starError !== null && (
           <p className={styles.error} role="alert">
-            {starError ?? notice}
+            {starError}
           </p>
         )}
 
