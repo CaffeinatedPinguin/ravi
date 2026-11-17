@@ -114,6 +114,10 @@ test('notification filters, one unread from a new comment, inbox lands on the th
   await item.click();
   await expect(page.getByRole('heading', { name: /E2E pull request/ })).toBeVisible();
   expect(new URL(page.url()).searchParams.get('thread')).toBe(String(notifying.id));
+  // Three forge comments (500, 5000 and the new one) anchor on src/util.ts line 2, so the page must
+  // show exactly three thread sections: one per distinct forge thread, not one per sibling row.
+  await expect(page.locator('[id^="thread-"]')).toHaveCount(3);
+  await expect(page.locator(`#thread-${String(notifying.id)}`)).toHaveCount(1);
   await expect(page.locator(`#thread-${String(notifying.id)}`)).toBeVisible();
 });
 
