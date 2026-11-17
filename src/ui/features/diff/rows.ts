@@ -117,6 +117,23 @@ function notice(kind: 'error' | 'binary' | 'large' | 'empty'): Row {
 }
 
 /**
+ * One row per comment anchor. Several forge threads can sit on the same path/side/line, and a row
+ * renders every thread stored under its key (`threadsOf`); a row per thread would then render each
+ * thread once per sibling, so the same `thread-<id>` would exist many times in the DOM.
+ */
+function uniqueThreadsByKey(threads: readonly CommentThread[]): CommentThread[] {
+  const seen = new Set<string>();
+  const unique: CommentThread[] = [];
+  for (const thread of threads) {
+    if (!seen.has(thread.key)) {
+      seen.add(thread.key);
+      unique.push(thread);
+    }
+  }
+  return unique;
+}
+
+/**
  * Inserts thread rows after the line they belong to. A comment whose line is not in the current
  * hunks/expansions would otherwise vanish; it is collected in one row under the file header.
  */
@@ -131,7 +148,7 @@ function insertCommentRows(
   }
   const anchors = anchorIndexes(rows, path);
   const visible = new Set(anchors.keys());
-  const { inline, outside } = partitionThreads(threads, visible);
+  const { inline, outside } = partitionThreads(uniqueThreadsByKey(threads), visible);
   const after = new Map<number, Row[]>();
   const pushAfter = (index: number, row: Row) => {
     const list = after.get(index) ?? [];

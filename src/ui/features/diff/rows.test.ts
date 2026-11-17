@@ -57,6 +57,15 @@ describe('buildFileRows with comments', () => {
     expect(rows[5]).toEqual({ kind: 'thread', threadKey: threadKey(PATH, 'new', 3) });
   });
 
+  it('renders one row for threads that share an anchor, so no thread is mounted twice', () => {
+    // Three forge threads on one line share the row key; the row renders all of them once.
+    const rows = buildFileRows(view(), 'unified', [thread(2), thread(2), thread(2)]);
+
+    expect(rows.filter((row) => row.kind === 'thread')).toEqual([
+      { kind: 'thread', threadKey: threadKey(PATH, 'new', 2) },
+    ]);
+  });
+
   it('collects comments outside the shown hunks into one row under the file header', () => {
     const rows = buildFileRows(view(), 'unified', [thread(99), thread(100)]);
 
