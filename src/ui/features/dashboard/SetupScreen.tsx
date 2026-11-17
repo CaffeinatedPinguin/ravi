@@ -33,7 +33,7 @@ export function SetupScreen({ notice }: { notice: string | null }) {
             <Button onClick={() => navigate('/settings#accounts')}>How tokens work</Button>
           </div>
           <p className={styles.setupHint}>
-            Tokens are stored in <code>~/.ravi/.env</code> (only readable by you). Set them in Settings → Accounts or
+            Tokens are stored in the <code>.env</code> file in the ravi data folder (only readable by you). Set them in Settings → Accounts or
             per repository; ravi never shows them again.
           </p>
         </div>

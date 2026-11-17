@@ -24,7 +24,7 @@ Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only loc
 - Server code must run under Node's type stripping: erasable TypeScript only, relative imports end in `.ts`.
 - `src/shared/` is the only contract between server and UI; every payload has a Zod schema there.
 - Nothing is written to a forge except through the explicit Send action; all other edits stay drafts.
-- Tokens live only in `~/.ravi/.env`; Settings writes them there, ravi never reads them from the environment, and only the last four characters are shown again.
+- Tokens live only in the `.env` file of the data folder (`~/.ravi`, or `RAVI_HOME` when set); Settings writes them there, ravi never reads them from the environment, and only the last four characters are shown again.
 - Run git through the helpers in `src/server/git/`; never build a shell command string.
 - Comment the "why" (forge API quirks, git behaviour, performance), not the "what".
 - UI and review logic ask a forge for `capabilities`, never for its kind.

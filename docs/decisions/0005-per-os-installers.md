@@ -38,13 +38,18 @@ being clever.
 
   `PATH` is changed explicitly: the user `PATH` on Windows, one marked line in the shell profile
   on macOS and Linux, added only once.
-- The data folder stays `~/.ravi`, as in [0004](0004-tokens-written-from-settings.md).
+- Data lives next to the program, so everything is in one place. The launcher each installer
+  writes sets `RAVI_HOME` to the install folder (a `RAVI_HOME` already in the environment wins).
+  Started without the launcher, ravi still defaults to `~/.ravi`. The `.env` token file keeps the
+  rules of [0004](0004-tokens-written-from-settings.md). Installers never move existing data, since
+  it holds tokens: if `~/.ravi` exists, they print the command to copy it.
 - Installers never install Node.js or git; they report what is missing.
 
 ## Consequences
 
 - One obvious file per system, and the same steps to update (run it again) and to uninstall (delete
-  the printed folders and `PATH` entry).
+  the printed folders and `PATH` entry). Uninstalling also deletes the data, so the installers say
+  to copy it out first.
 - The build (`scripts/finish-build.ts`) copies the installers into `dist/`, so `dist/` is exactly
   the release; the release workflow lists those four files.
 - Shell installers are run as `sh install-linux.sh`, because the artifact transfer drops the

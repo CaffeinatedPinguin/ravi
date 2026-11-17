@@ -159,7 +159,7 @@ export async function forgeFor(paths: Paths, repo: RepoRef, options: ForgeForOpt
     options.tokenScope,
   );
   if (token === undefined) {
-    throw new HttpError(401, `No token for ${host.host}: add ${host.tokenEnv} to ~/.ravi/.env`);
+    throw new HttpError(401, `No token for ${host.host}: add ${host.tokenEnv} to ${paths.envFile}`);
   }
 
   const auth = (headers: Headers): void => host.auth(token, headers);

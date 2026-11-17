@@ -53,7 +53,7 @@ export function AccountsSection() {
                   Token present
                 </span>
               ) : (
-                <code className={styles.instruction}>add {token}=… to ~/.ravi/.env</code>
+                <code className={styles.instruction}>add {token}=… to the .env file in the ravi data folder</code>
               )}
             </li>
           );
