@@ -12,7 +12,7 @@ import { startFakeForge } from '../support/fake-forge.ts';
 import type { FakeForge } from '../support/fake-forge.ts';
 import { createFixture } from '../support/fixture.ts';
 import type { Fixture } from '../support/fixture.ts';
-import { shotLive } from './support.ts';
+import { exportAction, shotLive } from './support.ts';
 
 let fixture: Fixture;
 let forge: FakeForge;
@@ -135,12 +135,6 @@ async function switchLayout(page: Page, name: 'Split' | 'Unified'): Promise<void
   );
   await page.getByRole('radio', { name }).click();
   await saved;
-}
-
-/** Copy and Save live in the toolbar's Export menu; Import is a button of its own. */
-async function exportAction(page: Page, name: 'Copy for AI' | 'Save as file'): Promise<void> {
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
-  await page.getByRole('menuitem', { name, exact: true }).click();
 }
 
 /**

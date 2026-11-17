@@ -11,6 +11,7 @@ import type { DiffFile, DiffOptions, DiffSummary } from '../../../shared/api.ts'
 import type { Thread } from '../../../shared/forge.ts';
 import type { ReviewComment } from '../../../shared/review.ts';
 import { apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import type { CommentThread } from '../comments/threads.ts';
 import { groupThreads, isOutsideThreadKey, pathFromOutsideThreadKey } from '../comments/threads.ts';
 import { remoteThreadsForPath } from '../pulls/remoteThreads.ts';
@@ -359,7 +360,7 @@ export class DiffSession {
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not load the diff';
+      const message = errorMessage(error, 'Could not load the diff');
       for (const index of indexes) {
         const view = this.views[index];
         if (view) {

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { ForgeStatusViewListSchema, ForgeStatusViewSchema } from '../../../shared/api.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { useAsync } from '../../app/useAsync.ts';
 import { Button } from '../../components/controls.tsx';
 import { Section } from './Section.tsx';
@@ -24,7 +25,7 @@ export function AccountsSettingsSection() {
       setNotice(status.hasToken ? `${host} token saved` : `${host} token removed`);
       forges.reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not save the token');
+      setError(errorMessage(reason, 'Could not save the token'));
     } finally {
       setBusy(null);
     }

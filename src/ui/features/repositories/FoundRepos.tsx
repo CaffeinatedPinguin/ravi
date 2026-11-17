@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { RepoSchema } from '../../../shared/api.ts';
 import type { Repo } from '../../../shared/api.ts';
 import { apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { Button } from '../../components/controls.tsx';
 import styles from '../settings/SettingsPage.module.css';
 import { pathKey } from './scan.ts';
@@ -48,7 +49,7 @@ export function FoundRepos({ folder, found, connected, onAdded, onCancel }: Prop
       onAdded(added);
     } catch (reason) {
       // Whatever was connected before the failure stays connected; the caller reloads its list on close.
-      setError(reason instanceof Error ? reason.message : 'Could not add the repositories');
+      setError(errorMessage(reason, 'Could not add the repositories'));
     } finally {
       setBusy(false);
     }

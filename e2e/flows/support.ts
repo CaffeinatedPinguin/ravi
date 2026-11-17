@@ -126,6 +126,12 @@ export function repoIdFrom(page: Page): string {
   return match[1];
 }
 
+/** Opens the review toolbar's Export menu and clicks Copy for AI or Save as file. */
+export async function exportAction(page: Page, name: 'Copy for AI' | 'Save as file'): Promise<void> {
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await page.getByRole('menuitem', { name, exact: true }).click();
+}
+
 /**
  * Light and dark screenshots of the current state, without reloading.
  *

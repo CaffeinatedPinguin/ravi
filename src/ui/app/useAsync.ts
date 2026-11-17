@@ -1,5 +1,6 @@
 /** Loads data for a component and tracks pending and error state. Small on purpose: no cache, no retries. */
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage } from './errors.ts';
 
 export type AsyncState<T> = {
   data: T | undefined;
@@ -28,7 +29,7 @@ export function useAsync<T>(key: string, load: (signal: AbortSignal) => Promise<
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted) {
-          setSettled({ key, attempt, data: undefined, error: reason instanceof Error ? reason.message : 'Something went wrong' });
+          setSettled({ key, attempt, data: undefined, error: errorMessage(reason, 'Something went wrong') });
         }
       });
     return () => controller.abort();

@@ -11,6 +11,7 @@ import type { DiffTarget, ReviewReport } from '../../../shared/api.ts';
 import { ReviewImportResponseSchema } from '../../../shared/api.ts';
 import type { ReviewDocument } from '../../../shared/review.ts';
 import { apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { Button, IconButton } from '../../components/controls.tsx';
 import { readImportFile } from './importFile.ts';
 import styles from './ImportDialog.module.css';
@@ -52,7 +53,7 @@ export function ImportDialog({ repoId, diffTarget, currentDocument, initialMarkd
       setFileName(file.name);
       setPreview(null);
     } catch (reason) {
-      setError(message(reason));
+      setError(errorMessage(reason, 'Could not import the review'));
     } finally {
       setReading(false);
     }
@@ -81,7 +82,7 @@ export function ImportDialog({ repoId, diffTarget, currentDocument, initialMarkd
       );
     } catch (reason) {
       setPreview(null);
-      setError(message(reason));
+      setError(errorMessage(reason, 'Could not import the review'));
     } finally {
       setBusy(false);
     }
@@ -167,8 +168,4 @@ function ImportReport({ preview }: { preview: Preview }) {
       )}
     </div>
   );
-}
-
-function message(reason: unknown): string {
-  return reason instanceof Error ? reason.message : 'Could not import the review';
 }

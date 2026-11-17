@@ -7,6 +7,7 @@ import { PullRequestStatusSchema, RepoListSchema } from '../../../shared/api.ts'
 import type { ReviewAction } from '../../../shared/forge.ts';
 import type { ReviewDocument } from '../../../shared/review.ts';
 import { apiGet, apiSend, ApiError } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
 import { Brand } from '../../components/Brand.tsx';
@@ -271,7 +272,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
       if (reason instanceof ApiError && reason.status === 409) {
         setConflict('This pull request has new commits since you opened it');
       } else {
-        setSendError(reason instanceof Error ? reason.message : 'Could not send the review');
+        setSendError(errorMessage(reason, 'Could not send the review'));
       }
     } finally {
       setSending(false);
@@ -297,7 +298,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
       const failed = response.results.length - ok;
       showToast({ message: `Retry: ${ok} ok, ${failed} failed` }, 6000);
     } catch (reason) {
-      showToast({ message: reason instanceof Error ? reason.message : 'Retry failed' }, 6000);
+      showToast({ message: errorMessage(reason, 'Retry failed') }, 6000);
     } finally {
       setSending(false);
     }
@@ -335,7 +336,7 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
         6000,
       );
     } catch (reason) {
-      showToast({ message: reason instanceof Error ? reason.message : 'Retry failed' }, 6000);
+      showToast({ message: errorMessage(reason, 'Retry failed') }, 6000);
     } finally {
       setSending(false);
     }

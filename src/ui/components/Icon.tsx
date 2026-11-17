@@ -24,6 +24,7 @@ const PATHS = {
   collapse: 'M3 6l5-4 5 4M3 10l5 4 5-4',
   comment: 'M2.5 3.5h11v7h-6l-3 3v-3h-2z',
   star: 'M8 1.8l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 12.2 4.2 13.6l.7-4.3-3.1-3 4.3-.6z',
+  gear: 'M8 5.7a2.3 2.3 0 1 0 0 4.6 2.3 2.3 0 0 0 0-4.6zM8 1.5v1.7M8 12.8v1.7M1.5 8h1.7M12.8 8h1.7M3.4 3.4l1.2 1.2M11.4 11.4l1.2 1.2M3.4 12.6l1.2-1.2M11.4 4.6l1.2-1.2',
 } as const;
 
 export type IconName = keyof typeof PATHS;

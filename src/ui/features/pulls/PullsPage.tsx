@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { z } from 'zod';
 import { FetchResponseSchema, RepoListSchema, ReviewLaterListSchema } from '../../../shared/api.ts';
 import { apiGet, apiSend } from '../../app/api.ts';
+import { errorMessage } from '../../app/errors.ts';
 import { navigate } from '../../app/router.ts';
 import { useSettings } from '../../app/settings.tsx';
 import { useAsync } from '../../app/useAsync.ts';
@@ -43,7 +44,7 @@ export function PullsPage({ repoId }: PullsPageProps) {
       }
       later.reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not update Review later');
+      setError(errorMessage(reason, 'Could not update Review later'));
     } finally {
       setBusy(null);
     }
@@ -56,7 +57,7 @@ export function PullsPage({ repoId }: PullsPageProps) {
       await apiSend('POST', `/api/repos/${repoId}/fetch`, {}, FetchResponseSchema);
       pulls.reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Could not fetch the repository');
+      setError(errorMessage(reason, 'Could not fetch the repository'));
     } finally {
       setBusy(null);
     }
