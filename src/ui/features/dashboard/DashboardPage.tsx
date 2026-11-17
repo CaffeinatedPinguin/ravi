@@ -291,17 +291,6 @@ function RepositorySection({
         <span className={styles.connection} data-missing={status.missing || undefined}>
           {status.label}
         </span>
-        {status.missing && (
-          <a
-            href="/settings#accounts"
-            onClick={(event) => {
-              event.preventDefault();
-              navigate('/settings#accounts');
-            }}
-          >
-            Settings
-          </a>
-        )}
         <IconButton icon="refresh" label={`Refresh ${repo.name}`} aria-busy={card?.loading} onClick={onReload} />
       </header>
 
@@ -363,7 +352,7 @@ function RepositorySection({
 type PullGroupsProps = {
   repoId: string;
   groups: ReturnType<typeof groupPullRequests>;
-  emptyMessage: string | null;
+  emptyMessage: ReactNode;
   starred: ReadonlySet<string>;
   starBusy: string | null;
   onToggleStar: (number: number) => void;
@@ -585,7 +574,7 @@ function forgeStatusOf(repo: Repo, forges: ForgeStatus[] | undefined): { label: 
     : { label: `${repo.remote.host} · token missing`, missing: true };
 }
 
-function emptyMessage(repo: Repo, status: { missing: boolean }, card: RepoCard | undefined): string | null {
+function emptyMessage(repo: Repo, status: { missing: boolean }, card: RepoCard | undefined): ReactNode {
   if (card?.error !== null && card?.error !== undefined) {
     return null;
   }
@@ -593,7 +582,20 @@ function emptyMessage(repo: Repo, status: { missing: boolean }, card: RepoCard |
     return 'This local folder has no forge remote, so there are no pull requests.';
   }
   if (status.missing) {
-    return 'Add a token in Settings to list pull requests for this host.';
+    return (
+      <>
+        <a
+          href="/settings#settings-accounts"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate('/settings#settings-accounts');
+          }}
+        >
+          Add a token in Settings
+        </a>{' '}
+        to list pull requests for this host.
+      </>
+    );
   }
   if (card?.loading === true) {
     return null;

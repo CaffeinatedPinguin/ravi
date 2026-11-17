@@ -35,6 +35,19 @@ export function SettingsPage() {
     update({ notifications: { ...notifications, ...change } });
   const { permission, request } = usePermission();
 
+  // The router's pushState does not scroll to the hash, so reveal the named section ourselves.
+  useEffect(() => {
+    const reveal = (): void => {
+      const id = window.location.hash.slice(1);
+      if (id !== '') {
+        document.getElementById(id)?.scrollIntoView({ block: 'start' });
+      }
+    };
+    reveal();
+    window.addEventListener('hashchange', reveal);
+    return () => window.removeEventListener('hashchange', reveal);
+  }, []);
+
   const filters = useMemo<NotificationFilters>(
     () => ({
       muteBots: notifications.muteBots,

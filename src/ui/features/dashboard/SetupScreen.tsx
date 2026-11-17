@@ -25,7 +25,7 @@ export function SetupScreen() {
             <Button variant="primary" onClick={() => navigate('/repositories')}>
               Add your first repository
             </Button>
-            <Button onClick={() => navigate('/settings#accounts')}>How tokens work</Button>
+            <Button onClick={() => navigate('/settings#settings-accounts')}>How tokens work</Button>
           </div>
           <p className={styles.setupHint}>
             Tokens are stored in the <code>.env</code> file in the ravi data folder (only readable by you). Set them in Settings → Accounts or
