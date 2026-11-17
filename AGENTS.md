@@ -4,12 +4,15 @@ ravi is a local code review tool with a GitHub/GitLab-like UI: review local git 
 GitHub.com/GitLab.com pull requests, keep comments as drafts, exchange them with AI agents as
 Markdown, and send them to the forge on demand. It ships as one JavaScript file that runs on Node.
 
+Domain: ../ai/domains/frontend/AGENTS.md (generic rules; this file adds only local ones)
+
 ## Read when
 
 | Task | Read |
 |---|---|
 | Understand the runtime, modules or data folder | `docs/architecture/overview.md` |
 | Change packaging, runtime or dependencies | `docs/decisions/0001-stack-and-distribution.md` |
+| Change the installers or the release files | `docs/decisions/0005-per-os-installers.md` |
 | Change token storage or forge authentication | `docs/decisions/0004-tokens-written-from-settings.md` |
 | Commands, install and usage | `README.md` |
 
@@ -36,4 +39,5 @@ Markdown, and send them to the forge on demand. It ships as one JavaScript file 
 ## Never
 
 - Commit `.env` files or tokens (enforced by pre-commit TruffleHog hook)
-- Add `node_modules` or extra files to the release; the release is `ravi.mjs`, `ravi`, `ravi.cmd` (enforced by `scripts/finish-build.ts`).
+- Add `node_modules` or extra files to the release; the release is `ravi.mjs` and the three installers in `install/` (enforced by `scripts/finish-build.ts`).
+- Make an installer unreadable: they are read by people, so keep numbered steps and English comments, plain ASCII, and explain every network access and every change to `PATH`.

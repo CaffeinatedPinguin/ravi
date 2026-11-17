@@ -21,28 +21,67 @@ one JavaScript file that runs on Node with the UI embedded.
   server image proxy, and tokens that never reach the browser.
 - **Performance** — virtualized diff rendering that stays smooth with thousands of changed files.
 
-## Install and run
+## Install
 
-ravi needs Node 22.20 or newer and git.
+ravi needs Node 22.20 or newer and git. Download the installer for your system from the
+[latest release](https://github.com/CaffeinatedPinguin/ravi/releases/latest) and run it. You do not
+need the other files on that page.
 
-Download a release and copy `ravi.mjs`, `ravi` and `ravi.cmd` into one folder on your `PATH`, or run
-the installer, which installs ravi into `~/.ravi/bin`:
+| System | Download | Run |
+|---|---|---|
+| Windows | `install-windows.ps1` | `powershell -ExecutionPolicy Bypass -File .\install-windows.ps1` |
+| macOS | `install-macos.sh` | `sh install-macos.sh` |
+| Linux | `install-linux.sh` | `sh install-linux.sh` |
+
+On Windows, run the command from a PowerShell window so the output stays visible. Windows blocks
+downloaded scripts by default, which is why the command passes `-ExecutionPolicy Bypass`.
+
+The installers are short, plain scripts written to be read: every step has a comment, so open one
+before you run it. In short, an installer:
+
+1. checks that Node.js and git are installed (it never installs them for you);
+2. asks GitHub for the latest ravi release and says whether you already have it;
+3. downloads `ravi.mjs` from that release and writes a small `ravi` launcher next to it;
+4. adds the launcher's folder to your `PATH`, so `ravi` works in any new terminal;
+5. prints how to start, update and uninstall ravi.
+
+It needs no administrator rights or `sudo`, and it prints every address it contacts, which are
+only `api.github.com` (latest release) and `github.com` (the `ravi.mjs` download).
+
+| System | Program and launcher | `PATH` change |
+|---|---|---|
+| Windows | `%LOCALAPPDATA%\Programs\ravi` (`ravi.mjs`, `ravi.cmd`) | your user `PATH` |
+| macOS | `~/.local/share/ravi/ravi.mjs`, `~/.local/bin/ravi` | two lines in `~/.zshrc` (`~/.bash_profile` for bash) |
+| Linux | `~/.local/share/ravi/ravi.mjs`, `~/.local/bin/ravi` | two lines in `~/.bashrc` (`~/.zshrc` for zsh), only if `~/.local/bin` is not in `PATH` yet |
+
+Without a network connection, download `ravi.mjs` from the release as well and pass it to the
+installer: `-LocalFile .\ravi.mjs` on Windows, `sh install-linux.sh ./ravi.mjs` on Linux and macOS.
+Set `RAVI_PREFIX` (macOS and Linux) or pass `-InstallDir` (Windows) to install somewhere else.
+
+## Start ravi
+
+Open a **new** terminal (windows that were already open do not see the `PATH` change), go to a
+folder with a git repository and run:
 
 ```sh
-./install/install.sh          # Linux, macOS
-```
-
-```powershell
-./install/install.ps1         # Windows
-```
-
-```sh
-ravi --help                   # options
 ravi                          # open the repository in the current folder
+ravi path/to/repo             # open another repository
+ravi --help                   # all options
 ```
 
-On first run ravi opens the dashboard and asks you to add a repository: choose a local folder or
-paste a GitHub/GitLab URL. Application data, including the token file, lives in `~/.ravi`.
+ravi opens the review in your browser and keeps running in that terminal; press `Ctrl+C` to stop
+it. Running `ravi` again while it is running only opens the browser. On first run ravi opens the
+dashboard and asks you to add a repository: choose a local folder or paste a GitHub/GitLab URL.
+Application data, including the token file, lives in `~/.ravi`.
+
+## Update and uninstall
+
+To update, run the installer again: it compares your version with the latest release and downloads
+only when there is a newer one.
+
+To uninstall, delete the folder or files listed in the table above and remove the `PATH` entry (the
+installer prints the exact steps at the end). Your reviews and tokens stay in `~/.ravi` until you
+delete that folder too.
 
 ## Built with
 
@@ -63,7 +102,7 @@ pnpm typecheck
 pnpm lint
 pnpm e2e            # Playwright in Microsoft Edge (build first)
 pnpm bench          # server-side benchmark on a throwaway repository
-pnpm build          # dist/ravi.mjs + ravi and ravi.cmd launchers
+pnpm build          # dist/ravi.mjs + the three installers (the release files)
 ```
 
 CI runs on every pull request and on `main`, and the single required check is `ci-required`.
