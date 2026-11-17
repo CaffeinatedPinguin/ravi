@@ -48,11 +48,16 @@ before you run it. In short, an installer:
 It needs no administrator rights or `sudo`, and it prints every address it contacts, which are
 only `api.github.com` (latest release) and `github.com` (the `ravi.mjs` download).
 
-| System | Program and launcher | `PATH` change |
-|---|---|---|
-| Windows | `%LOCALAPPDATA%\Programs\ravi` (`ravi.mjs`, `ravi.cmd`) | your user `PATH` |
-| macOS | `~/.local/share/ravi/ravi.mjs`, `~/.local/bin/ravi` | two lines in `~/.zshrc` (`~/.bash_profile` for bash) |
-| Linux | `~/.local/share/ravi/ravi.mjs`, `~/.local/bin/ravi` | two lines in `~/.bashrc` (`~/.zshrc` for zsh), only if `~/.local/bin` is not in `PATH` yet |
+| System | Program and data | Launcher | `PATH` change |
+|---|---|---|---|
+| Windows | `%LOCALAPPDATA%\Programs\ravi` | `ravi.cmd`, same folder | your user `PATH` |
+| macOS | `~/.local/share/ravi` | `~/.local/bin/ravi` | two lines in `~/.zshrc` (`~/.bash_profile` for bash) |
+| Linux | `~/.local/share/ravi` | `~/.local/bin/ravi` | two lines in `~/.bashrc` (`~/.zshrc` for zsh), only if `~/.local/bin` is not in `PATH` yet |
+
+ravi keeps its data (reviews, settings and the `.env` file with your tokens) in the same folder as
+the program, so everything is in one place. The launcher sets `RAVI_HOME` to that folder; run
+`ravi --help` to see it. If you used an earlier release, which kept its data in `~/.ravi`, the
+installer shows the command to copy it over.
 
 Without a network connection, download `ravi.mjs` from the release as well and pass it to the
 installer: `-LocalFile .\ravi.mjs` on Windows, `sh install-linux.sh ./ravi.mjs` on Linux and macOS.
@@ -72,16 +77,16 @@ ravi --help                   # all options
 ravi opens the review in your browser and keeps running in that terminal; press `Ctrl+C` to stop
 it. Running `ravi` again while it is running only opens the browser. On first run ravi opens the
 dashboard and asks you to add a repository: choose a local folder or paste a GitHub/GitLab URL.
-Application data, including the token file, lives in `~/.ravi`.
+Application data, including the token file, lives in the install folder (see the table above).
 
 ## Update and uninstall
 
 To update, run the installer again: it compares your version with the latest release and downloads
 only when there is a newer one.
 
-To uninstall, delete the folder or files listed in the table above and remove the `PATH` entry (the
-installer prints the exact steps at the end). Your reviews and tokens stay in `~/.ravi` until you
-delete that folder too.
+To uninstall, delete the program folder and the launcher listed in the table above and remove the
+`PATH` entry (the installer prints the exact steps at the end). The folder also holds your reviews and
+tokens, so copy them out first if you want to keep them.
 
 ## Built with
 
@@ -114,7 +119,7 @@ collaborators can open them), see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ravi runs locally and holds forge tokens, so it is built security-first: the server binds
 `127.0.0.1`, checks the `Host` header, requires a session cookie, adds a CSRF header to mutating
-calls, passes git arguments as an array, and keeps tokens in `~/.ravi/.env` only. To report a
+calls, passes git arguments as an array, and keeps tokens in the `.env` file of its data folder only. To report a
 vulnerability, follow [SECURITY.md](SECURITY.md).
 
 ## License

@@ -1,6 +1,7 @@
 /**
- * Everything ravi owns on disk lives under one folder (`~/.ravi`), so it is easy to find and to delete.
- * `RAVI_HOME` overrides the location; tests and development use it to stay out of the real folder.
+ * Everything ravi owns on disk lives under one folder (`~/.ravi` by default), so it is easy to find
+ * and to delete. `RAVI_HOME` overrides the location: the launchers written by the installers set it
+ * to the install folder, and tests and development use it to stay out of the real folder.
  */
 import { homedir } from 'node:os';
 import { join } from 'node:path';

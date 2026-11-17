@@ -37,7 +37,9 @@ Dependencies point one way: `ui → shared ← server`. Features do not import e
 
 ## Data folder
 
-Everything lives in `~/.ravi` (override with `RAVI_HOME`):
+Everything lives in one folder, `~/.ravi` by default. `RAVI_HOME` overrides it, and the launchers
+written by the installers set it to the install folder, so the data sits next to the program
+(see [0005](../decisions/0005-per-os-installers.md)). `ravi --help` prints the folder in use:
 
 | Path | Content |
 |---|---|
@@ -62,7 +64,7 @@ The server holds forge tokens and can run git, so it defends against other web p
 - API calls need the session cookie; the CLI opens `/?token=…`, the server sets an HttpOnly cookie and redirects.
 - Mutating calls need the `x-ravi` header (CSRF).
 - File paths are validated against the repository root; git arguments are passed as an array, never through a shell.
-- Tokens are read only from `~/.ravi/.env`; they are never returned to the UI, logged or exported.
+- Tokens are read only from the `.env` file in the data folder; they are never returned to the UI, logged or exported.
 - Comment images go through `/api/image-proxy` or `/api/assets/:id`, with a host allowlist,
   `nosniff` and a restrictive content security policy.
 
