@@ -13,7 +13,7 @@ import { Brand } from '../../components/Brand.tsx';
 import { Button, IconButton, Segmented, Toggle } from '../../components/controls.tsx';
 import { ShortcutsDialog } from '../../components/ShortcutsDialog.tsx';
 import type { Shortcut } from '../../components/ShortcutsDialog.tsx';
-import { showToast, ToastHost } from '../../components/Toast.tsx';
+import { showToast } from '../../components/Toast.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import { ComposerCapabilitiesContext } from '../comments/ComposerContext.ts';
 import { MarkdownView } from '../comments/MarkdownView.tsx';
@@ -584,7 +584,6 @@ export function PullRequestPage({ repoId, number }: PullRequestPageProps) {
         />
       )}
       <ShortcutsDialog shortcuts={tab === 'files' ? FILE_SHORTCUTS : CONVERSATION_SHORTCUTS} />
-      <ToastHost />
     </div>
   );
 }

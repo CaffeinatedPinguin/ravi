@@ -5,7 +5,7 @@ import { Button } from '../../components/controls.tsx';
 import { TopBarActions } from '../../components/TopBarActions.tsx';
 import styles from './DashboardPage.module.css';
 
-export function SetupScreen({ notice }: { notice: string | null }) {
+export function SetupScreen() {
   return (
     <div className={styles.page}>
       <header className={styles.topBar}>
@@ -21,11 +21,6 @@ export function SetupScreen({ notice }: { notice: string | null }) {
             ravi reads your git folders and GitHub/GitLab pull requests, keeps review comments as drafts, and
             sends them to the forge only when you ask. Everything stays on this machine.
           </p>
-          {notice !== null && (
-            <p className={styles.error} role="alert">
-              {notice}
-            </p>
-          )}
           <div className={styles.setupActions}>
             <Button variant="primary" onClick={() => navigate('/repositories')}>
               Add your first repository
