@@ -1,4 +1,4 @@
-<p align="center"><img src="src/ui/public/brand/logo.svg" width="96" alt="ravi logo"></p>
+<p align="center"><img src="src/ui/public/brand/logo-purple.svg" width="96" alt="ravi logo"></p>
 
 # ravi
 
