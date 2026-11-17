@@ -41,14 +41,21 @@ need the other files on that page.
 | macOS | `install-macos.sh` | `sh install-macos.sh` |
 | Linux | `install-linux.sh` | `sh install-linux.sh` |
 
-Run the Windows installer from PowerShell in the download folder so you can see the output. Windows
-blocks downloaded scripts by default, which is why the command passes `-ExecutionPolicy Bypass`.
+On Windows, run the command from PowerShell in the download folder so you can see the output.
+Windows blocks downloaded scripts by default, which is why the command passes
+`-ExecutionPolicy Bypass`.
 
-The installers are plain scripts; read one before you run it. Each checks for Node and git,
-downloads `ravi.mjs` from the latest release, writes a launcher, and adds it to your `PATH`. They
-need no administrator rights, and they contact only `api.github.com` and `github.com`.
+### What the installer does
 
-Each installer uses the standard per-user locations:
+The installers are plain scripts; read one before you run it. Each one:
+
+- checks that Node and git are installed;
+- downloads `ravi.mjs` from the latest release;
+- writes a launcher and adds it to your `PATH`;
+- needs no administrator rights;
+- contacts only `api.github.com` and `github.com`.
+
+### Where it installs
 
 | System | Program and data | Launcher | `PATH` change |
 |---|---|---|---|
@@ -56,14 +63,15 @@ Each installer uses the standard per-user locations:
 | macOS | `~/.local/share/ravi` | `~/.local/bin/ravi` | two lines in `~/.zshrc` (`~/.bash_profile` for bash) |
 | Linux | `~/.local/share/ravi` | `~/.local/bin/ravi` | two lines in `~/.bashrc` (`~/.zshrc` for zsh), only if `~/.local/bin` is not in `PATH` yet |
 
-ravi keeps its data (reviews, settings and the `.env` file with your tokens) in the same folder as
-the program, so everything is in one place. The launcher sets `RAVI_HOME` to that folder; run
-`ravi --help` to see it. If you used an earlier release, which kept its data in `~/.ravi`, the
-installer shows the command to copy it over.
+ravi keeps reviews, settings and the `.env` file with your tokens in the same folder as the program.
+The launcher sets `RAVI_HOME` to that folder; run `ravi --help` to see it. If you used an earlier
+release, which kept its data in `~/.ravi`, the installer shows the command to copy it over.
 
-Without a network connection, download `ravi.mjs` from the release as well and pass it to the
-installer: `-LocalFile .\ravi.mjs` on Windows, `sh install-linux.sh ./ravi.mjs` on Linux and macOS.
-Set `RAVI_PREFIX` (macOS and Linux) or pass `-InstallDir` (Windows) to install somewhere else.
+### Offline install
+
+Download `ravi.mjs` from the release as well and pass it to the installer:
+`-LocalFile .\ravi.mjs` on Windows, `sh install-linux.sh ./ravi.mjs` on Linux and macOS. Set
+`RAVI_PREFIX` (macOS and Linux) or pass `-InstallDir` (Windows) to install somewhere else.
 
 ## Start ravi
 
@@ -97,22 +105,6 @@ TypeScript, Node, React, Vite, Shiki, markdown-it, Zod, Playwright in Microsoft 
 ## Documentation
 
 Architecture, the forge layer, and the review Markdown format are in [docs/index.md](docs/index.md).
-
-## Development
-
-```sh
-pnpm install
-pnpm dev            # API on :4784, UI with hot reload on http://localhost:5173
-pnpm test           # Vitest
-pnpm typecheck
-pnpm lint
-pnpm e2e            # Playwright in Microsoft Edge (build first)
-pnpm bench          # server-side benchmark on a throwaway repository
-pnpm build          # dist/ravi.mjs + the three installers (the release files)
-```
-
-CI runs on every pull request and on `main`; `ci-required` is the only required check. Dependabot
-keeps the GitHub Actions and npm/pnpm dependencies up to date.
 
 ## Security
 
